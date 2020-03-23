@@ -3,8 +3,8 @@
 # CMake file for openPOWERLINK Zynq PCP interface (Linux kernel Zynq PCP module)
 #
 # Copyright (c) 2013, SYSTEC electronik GmbH
-# Copyright (c) 2016, Bernecker+Rainer Industrie-Elektronik Ges.m.b.H. (B&R)
-# Copyright (c) 2016, Kalycito Infotech Private Limited
+# Copyright (c) 2016, B&R Industrial Automation GmbH
+# Copyright (c) 2018, Kalycito Infotech Private Limited
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -94,7 +94,10 @@ IF(CFG_OPLK_MN)
     SET(MODULE_NAME "${MODULE_NAME}mn")
     INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/proj/mn)
 ELSE()
-    MESSAGE(SEND_ERROR "Currently the interface only supports MN!")
+# Export C defines needed to identify the zynq CN design
+    ADD_DEFINITIONS(-D__LINUX_ZYNQ__ -DCONFIG_CN)
+    SET(MODULE_NAME "${MODULE_NAME}cn")
+    INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/proj/cn)
 ENDIF()
 
 SET(MODULE_NAME "oplk${MODULE_NAME}zynqintf")
@@ -147,20 +150,22 @@ SET(MODULE_SOURCE_FILES
     ${CONTRIB_SOURCE_DIR}/dualprocshm/src/dualprocshm-linuxzynq.c
     ${CONTRIB_SOURCE_DIR}/dualprocshm/src/dualprocshm-intr.c
     ${CONTRIB_SOURCE_DIR}/dualprocshm/src/dualprocshm-noos.c
+    ${CONTRIB_SOURCE_DIR}/dualprocshm/src/dualprocshm-lock.c
     ${COMMON_SOURCE_DIR}/circbuf/circbuf-noosdual.c
     ${COMMON_SOURCE_DIR}/circbuf/circbuffer.c
     ${COMMON_SOURCE_DIR}/debugstr.c
     ${CONTRIB_SOURCE_DIR}/trace/trace-printk.c
     ${KERNEL_SOURCE_DIR}/timesync/timesynck.c
-    ${KERNEL_SOURCE_DIR}/timesync/timesynckcal-linuxkernel.c
-    ${KERNEL_SOURCE_DIR}/veth/veth-linuxpcie.c
+    ${KERNEL_SOURCE_DIR}/timesync/timesynckcal-linuxdpshm.c
+    ${KERNEL_SOURCE_DIR}/veth/veth-linuxdpshm.c
     ${ARCH_SOURCE_DIR}/target-linuxkernel.c
+    ${STACK_SOURCE_DIR}/arch/linux/lock-linuxdualproc.c
     )
 
 IF(CMAKE_SYSTEM_PROCESSOR MATCHES "^(i.86|x86(_64)?)$")
     SET(MODULE_SOURCE_FILES ${MODULE_SOURCE_FILES} ${COMMON_SOURCE_DIR}/ami/amix86.c)
 ELSEIF(CMAKE_SYSTEM_PROCESSOR MATCHES arm*)
-    SET(MODULE_SOURCE_FILES ${MODULE_SOURCE_FILES} ${COMMON_SOURCE_DIR}/ami/amile.c)
+    SET(MODULE_SOURCE_FILES ${MODULE_SOURCE_FILES} ${COMMON_SOURCE_DIR}/ami/ami.c)
 ELSE()
     MESSAGE(FATAL_ERROR
             "ami: CMAKE_SYSTEM_PROCESSOR is set to ${CMAKE_SYSTEM_PROCESSOR}. Valid targets are (x86, x86_64, arm, armv7l, i686).")

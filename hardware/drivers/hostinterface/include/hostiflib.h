@@ -11,7 +11,7 @@ The hostiflib provides several features like queues and linear memory modules.
 *******************************************************************************/
 
 /*------------------------------------------------------------------------------
-Copyright (c) 2016, Bernecker+Rainer Industrie-Elektronik Ges.m.b.H. (B&R)
+Copyright (c) 2017, B&R Industrial Automation GmbH
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -146,6 +146,7 @@ typedef enum eHostifInstanceId
     kHostifInstIdK2UQueue,                          ///< K2U Queue
     kHostifInstIdU2KQueue,                          ///< U2K Queue
     kHostifInstIdPdo,                               ///< Pdo
+    kHostifInstIdTimesync,                          ///< Timesync
     kHostifInstIdLast,                              ///< last instance id
     kHostifInstIdInvalid = -1                       ///< Invalid instance id
 } tHostifInstanceId;
@@ -169,7 +170,7 @@ Configures the driver instance.
 */
 typedef struct sHostifConfig
 {
-    UINT8*              pBase;                      ///< Base address to host interface hardware
+    void*               pBase;                      ///< Base address to host interface hardware
     UINT                instanceNum;                ///< Number that identifies the hostif instance
     tHostifVersion      version;                    ///< Host interface version
 } tHostifConfig;
@@ -208,14 +209,17 @@ tHostifReturn   hostif_getError(tHostifInstance pInstance_p, tHostifError* pErr_
 tHostifReturn   hostif_setHeartbeat(tHostifInstance pInstance_p, UINT16 heartbeat_p);
 tHostifReturn   hostif_getHeartbeat(tHostifInstance pInstance_p, UINT16* pHeartbeat_p);
 
-tHostifReturn   hostif_dynBufAcquire(tHostifInstance pInstance_p, UINT32 pcpBaseAddr_p,
-                                     UINT8** ppBufBase_p);
-tHostifReturn   hostif_dynBufFree(tHostifInstance pInstance_p, const UINT8* pBufBase_p);
+tHostifReturn   hostif_dynBufAcquire(tHostifInstance pInstance_p,
+                                     UINT32 pcpBaseAddr_p,
+                                     void** ppBufBase_p);
+tHostifReturn   hostif_dynBufFree(tHostifInstance pInstance_p, const void* pBufBase_p);
 
-tHostifReturn   hostif_getBuf(tHostifInstance pInstance_p, tHostifInstanceId instId_p,
-                              UINT8** ppBufBase_p, UINT* pBufSize_p);
+tHostifReturn   hostif_getBuf(tHostifInstance pInstance_p,
+                              tHostifInstanceId instId_p,
+                              void** ppBufBase_p,
+                              size_t* pBufSize_p);
 
-tHostifReturn   hostif_getInitParam(tHostifInstance pInstance_p, UINT8** ppBase_p);
+tHostifReturn   hostif_getInitParam(tHostifInstance pInstance_p, void** ppBase_p);
 
 #ifdef __cplusplus
 }

@@ -3,8 +3,8 @@
 # CMake file for openPOWERLINK user PCIe interface (Linux kernel PCIe module)
 #
 # Copyright (c) 2013, SYSTEC electronik GmbH
-# Copyright (c) 2016, Bernecker+Rainer Industrie-Elektronik Ges.m.b.H. (B&R)
-# Copyright (c) 2015, Kalycito Infotech Private Limited
+# Copyright (c) 2016, B&R Industrial Automation GmbH
+# Copyright (c) 2018, Kalycito Infotech Private Limited
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -142,20 +142,22 @@ SET(MODULE_SOURCE_FILES
     ${CONTRIB_SOURCE_DIR}/dualprocshm/src/dualprocshm-linuxpcie.c
     ${CONTRIB_SOURCE_DIR}/dualprocshm/src/dualprocshm-intr.c
     ${CONTRIB_SOURCE_DIR}/dualprocshm/src/dualprocshm-noos.c
+    ${CONTRIB_SOURCE_DIR}/dualprocshm/src/dualprocshm-lock.c
     ${COMMON_SOURCE_DIR}/circbuf/circbuf-noosdual.c
     ${COMMON_SOURCE_DIR}/circbuf/circbuffer.c
     ${COMMON_SOURCE_DIR}/debugstr.c
     ${CONTRIB_SOURCE_DIR}/trace/trace-printk.c
     ${KERNEL_SOURCE_DIR}/timesync/timesynck.c
-    ${KERNEL_SOURCE_DIR}/timesync/timesynckcal-linuxkernel.c
-    ${KERNEL_SOURCE_DIR}/veth/veth-linuxpcie.c
+    ${KERNEL_SOURCE_DIR}/timesync/timesynckcal-linuxdpshm.c
+    ${KERNEL_SOURCE_DIR}/veth/veth-linuxdpshm.c
     ${ARCH_SOURCE_DIR}/target-linuxkernel.c
+    ${STACK_SOURCE_DIR}/arch/linux/lock-linuxdualproc.c
     )
 
 IF(CMAKE_SYSTEM_PROCESSOR MATCHES "^(i.86|x86(_64)?)$")
     SET(MODULE_SOURCE_FILES ${MODULE_SOURCE_FILES} ${COMMON_SOURCE_DIR}/ami/amix86.c)
 ELSEIF(CMAKE_SYSTEM_PROCESSOR MATCHES arm*)
-    SET(MODULE_SOURCE_FILES ${MODULE_SOURCE_FILES} ${COMMON_SOURCE_DIR}/ami/amile.c)
+    SET(MODULE_SOURCE_FILES ${MODULE_SOURCE_FILES} ${COMMON_SOURCE_DIR}/ami/ami.c)
 ELSE()
     MESSAGE(FATAL_ERROR
             "ami: CMAKE_SYSTEM_PROCESSOR is set to ${CMAKE_SYSTEM_PROCESSOR}. Valid targets are (x86, x86_64, arm, armv7l, i686).")

@@ -10,7 +10,8 @@ the openPOWERLINK kernel stack.
 \ingroup module_driver_linux_kernel
 *******************************************************************************/
 /*------------------------------------------------------------------------------
-Copyright (c) 2016, Bernecker+Rainer Industrie-Elektronik Ges.m.b.H. (B&R)
+Copyright (c) 2016, B&R Industrial Automation GmbH
+Copyright (c) 2018, Kalycito Infotech Private Limited
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -58,6 +59,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <linux/types.h>
 #include <linux/errno.h>
 #include <linux/version.h>
+#include <linux/uaccess.h>
 #include <linux/mm.h>
 #include <asm/uaccess.h>
 #include <asm/page.h>
@@ -155,7 +157,11 @@ static int          sendAsyncFrame(unsigned long arg_p);
 static int          writeErrorObject(unsigned long arg_p);
 static int          readErrorObject(unsigned long arg_p);
 
+#if (LINUX_VERSION_CODE <= KERNEL_VERSION(4, 15, 0))
 static void         increaseHeartbeatCb(ULONG data_p);
+#else
+static void         increaseHeartbeatCb(struct timer_list* data_p);
+#endif
 static void         startHeartbeatTimer(ULONG timeInMs_p);
 static void         stopHeartbeatTimer(void);
 
@@ -308,7 +314,13 @@ static int powerlinkOpen(struct inode* pInode_p,
         return -ENOTTY;
     }
 
+#if (LINUX_VERSION_CODE <= KERNEL_VERSION(4, 15, 0))
     init_timer(&heartbeatTimer_g);
+#else
+    /* timer_setup API is used instead of init_timer as it is deprecated
+     * in the new kernel */
+    timer_setup(&heartbeatTimer_g, increaseHeartbeatCb, 0);
+#endif
 
     if (ctrlk_init(NULL) != kErrorOk)
     {
@@ -341,12 +353,23 @@ The function implements openPOWERLINK kernel module close function.
 static int powerlinkRelease(struct inode* pInode_p,
                             struct file* pFile_p)
 {
+    tCtrlKernelStatus   status;
+    UINT16              retVal;
+
     UNUSED_PARAMETER(pInode_p);
     UNUSED_PARAMETER(pFile_p);
 
     DEBUG_LVL_ALWAYS_TRACE("PLK: + %s()...\n", __func__);
 
     stopHeartbeatTimer();
+
+    // Close lower driver resources
+    status = ctrlkcal_getStatus();
+    if (status == kCtrlStatusRunning)
+    {
+        ctrlk_executeCmd(kCtrlShutdown, &retVal, &status, NULL);
+    }
+
     ctrlk_exit();
     atomic_dec(&openCount_g);
 
@@ -554,7 +577,10 @@ The function implements openPOWERLINK kernel module mmap function.
 static int powerlinkMmap(struct file* pFile_p,
                          struct vm_area_struct* pVmArea_p)
 {
-    BYTE*       pPdoMem;
+    void*                        pPdoMem;
+#if defined(CONFIG_INCLUDE_SOC_TIME_FORWARD)
+    tTimesyncSharedMemory*       pSocTimeMem;
+#endif
     tOplkError  ret = kErrorOk;
 
     UNUSED_PARAMETER(pFile_p);
@@ -567,24 +593,52 @@ static int powerlinkMmap(struct file* pFile_p,
 
     pVmArea_p->vm_flags |= VM_RESERVED;
     pVmArea_p->vm_ops = &powerlinkVmOps_l;
-
-    ret = pdokcal_getPdoMemRegion(&pPdoMem, NULL);
-
-    if ((ret != kErrorOk) || (pPdoMem == NULL))
+#if defined(CONFIG_INCLUDE_SOC_TIME_FORWARD)
+    if (pVmArea_p->vm_pgoff == 0)
     {
-        DEBUG_LVL_ERROR_TRACE("%s() no PDO memory allocated!\n", __func__);
-        return -ENOMEM;
-    }
+#endif
+        ret = pdokcal_getPdoMemRegion(&pPdoMem, NULL);
 
-    if (remap_pfn_range(pVmArea_p,
-                        pVmArea_p->vm_start,
-                        (__pa(pPdoMem) >> PAGE_SHIFT),
-                        pVmArea_p->vm_end - pVmArea_p->vm_start,
-                        pVmArea_p->vm_page_prot))
-    {
-        DEBUG_LVL_ERROR_TRACE("%s() remap_pfn_range failed\n", __func__);
-        return -EAGAIN;
+        if ((ret != kErrorOk) || (pPdoMem == NULL))
+        {
+            DEBUG_LVL_ERROR_TRACE("%s() no PDO memory allocated!\n", __func__);
+            return -ENOMEM;
+        }
+
+        if (remap_pfn_range(pVmArea_p,
+                            pVmArea_p->vm_start,
+                            (__pa(pPdoMem) >> PAGE_SHIFT),
+                            pVmArea_p->vm_end - pVmArea_p->vm_start,
+                            pVmArea_p->vm_page_prot))
+        {
+            DEBUG_LVL_ERROR_TRACE("%s() remap_pfn_range failed for PDO memory\n",
+                                  __func__);
+            return -EAGAIN;
+        }
+#if defined(CONFIG_INCLUDE_SOC_TIME_FORWARD)
     }
+    else
+    {
+        pSocTimeMem = timesynckcal_getSharedMemory();
+        if (pSocTimeMem == NULL)
+        {
+            DEBUG_LVL_ERROR_TRACE("%s() no timesync memory allocated!\n", __func__);
+            return -ENOMEM;
+        }
+
+        if (remap_pfn_range(pVmArea_p,
+                            pVmArea_p->vm_start,
+                            (__pa(pSocTimeMem) >> PAGE_SHIFT),
+                            pVmArea_p->vm_end - pVmArea_p->vm_start,
+                            pVmArea_p->vm_page_prot))
+        {
+            DEBUG_LVL_ERROR_TRACE("%s() remap_pfn_range failed for timesync memory\n",
+                                  __func__);
+            return -EAGAIN;
+        }
+
+    }
+#endif
 
     powerlinkVmaOpen(pVmArea_p);
 
@@ -886,8 +940,11 @@ The function starts the timer used for updating the heartbeat counter.
 //------------------------------------------------------------------------------
 void startHeartbeatTimer(ULONG timeInMs_p)
 {
+#if (LINUX_VERSION_CODE <= KERNEL_VERSION(4, 15, 0))
     heartbeatTimer_g.function = increaseHeartbeatCb;
     heartbeatTimer_g.data = 0;
+#endif
+
     heartbeatTimer_g.expires = jiffies + (timeInMs_p * HZ / 1000);
     add_timer(&heartbeatTimer_g);
 }
@@ -918,7 +975,12 @@ heartbeat counter.
 \ingroup module_driver_linux_kernel
 */
 //------------------------------------------------------------------------------
+#if (LINUX_VERSION_CODE <= KERNEL_VERSION(4, 15, 0))
 void increaseHeartbeatCb(ULONG data_p)
+#else
+/* Modified increaseHeartbeatCb to handle callback functionality */
+void increaseHeartbeatCb(struct timer_list* data_p)
+#endif
 {
     UNUSED_PARAMETER(data_p);
 

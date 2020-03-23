@@ -11,7 +11,8 @@ files.
 
 /*------------------------------------------------------------------------------
 Copyright (c) 2015, SYSTEC electronic GmbH
-Copyright (c) 2016, Bernecker+Rainer Industrie-Elektronik Ges.m.b.H. (B&R)
+Copyright (c) 2018, B&R Industrial Automation GmbH
+Copyright (c) 2017, Kalycito Infotech Private Limited
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -56,17 +57,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //------------------------------------------------------------------------------
 // check for correct compilation options
 //------------------------------------------------------------------------------
-#if ((CONFIG_DLL_PRES_READY_AFTER_SOA != FALSE) && (CONFIG_DLL_PRES_READY_AFTER_SOC != FALSE))
-#error "DLLK: select only one of CONFIG_DLL_PRES_READY_AFTER_SOA and CONFIG_DLL_PRES_READY_AFTER_SOC."
-#endif
-
-#if (((CONFIG_DLL_PRES_READY_AFTER_SOA != FALSE) || (CONFIG_DLL_PRES_READY_AFTER_SOC != FALSE)) && defined(CONFIG_INCLUDE_NMT_MN))
-#error "DLLK: currently, CONFIG_DLL_PRES_READY_AFTER_* is not supported if CONFIG_INCLUDE_NMT_MN is enabled."
-#endif
-
-#if ((CONFIG_EDRV_FAST_TXFRAMES == FALSE) && ((CONFIG_DLL_PRES_READY_AFTER_SOA != FALSE) || (CONFIG_DLL_PRES_READY_AFTER_SOC != FALSE)))
-#error "DLLK: CONFIG_DLL_PRES_READY_AFTER_* is enabled, but not CONFIG_EDRV_FAST_TXFRAMES."
-#endif
 
 #if (defined(CONFIG_INCLUDE_NMT_MN) && (CONFIG_DLL_PRES_FILTER_COUNT == 0))
 #error "MN support needs CONFIG_DLL_PRES_FILTER_COUNT != 0"
@@ -81,7 +71,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #endif
 
 #if (defined(CONFIG_INCLUDE_NMT_RMN) && CONFIG_TIMER_USE_HIGHRES == FALSE)
-#error "RMN support needs CONFIG_TIMER_USE_HIGHRES == TRUE"
+#error "RMN support needs CONFIG_TIMER_USE_HIGHRES != FALSE"
 #endif
 
 #if (defined(CONFIG_INCLUDE_NMT_RMN) && !defined(CONFIG_INCLUDE_NMT_MN))
@@ -94,18 +84,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 // TracePoint support for realtime-debugging
 #ifdef _DBG_TRACE_POINTS_
-void TgtDbgSignalTracePoint(BYTE bTracePointNumber_p);
-void TgtDbgPostTraceValue(DWORD dwTraceValue_p);
-#define TGT_DBG_SIGNAL_TRACE_POINT(p)   TgtDbgSignalTracePoint(p)
-#define TGT_DBG_POST_TRACE_VALUE(v)     TgtDbgPostTraceValue(v)
+void target_signalTracePoint(UINT8 tracePointNumber_p);
+#define TGT_DBG_SIGNAL_TRACE_POINT(p)   target_signalTracePoint(p)
 #else
 #define TGT_DBG_SIGNAL_TRACE_POINT(p)
-#define TGT_DBG_POST_TRACE_VALUE(v)
 #endif
-
-#define DLLK_DBG_POST_TRACE_VALUE(event_p, nodeId_p, errorCode_p) \
-    TGT_DBG_POST_TRACE_VALUE((kEventSinkDllk << 28) | (event_p << 24) | \
-                             (nodeId_p << 16) | errorCode_p)
 
 // defines for indexes of tDllkInstance.pTxBuffer
 #define DLLK_TXFRAME_IDENTRES       0   // IdentResponse on CN / MN
@@ -247,7 +230,7 @@ typedef struct
 #endif
 #endif
 
-    UINT                    prescaleCycleCount;                     ///< Cycle counter for toggling PS bit in MN SOC
+    UINT16                  prescaleCycleCount;                     ///< Cycle counter for toggling PS bit in MN SOC
     UINT                    cycleCount;                             ///< Cycle counter (needed for multiplexed cycle support)
     UINT64                  frameTimeout;                           ///< Frame timeout (cycle length + loss of frame tolerance)
 
@@ -267,6 +250,10 @@ typedef struct
 #if defined(CONFIG_INCLUDE_NMT_RMN)
     BOOL                    fRedundancy;                            ///< Managing Node Redundancy is enabled
     tNmtEvent               nmtEventGoToStandby;                    ///< NMT command GoToStandby has been requested
+#endif
+#if (defined(CONFIG_INCLUDE_NMT_MN) && defined(CONFIG_INCLUDE_SOC_TIME_FORWARD))
+    BOOL                    fIncrementNetTime;                      ///< Flag to increment net time
+    tNetTime                cycleLength;                            ///< Cycle length in nano seconds and seconds
 #endif
 } tDllkInstance;
 

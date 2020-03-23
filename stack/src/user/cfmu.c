@@ -12,7 +12,7 @@ This file contains the implementation of the configuration file manager (CFM).
 /*------------------------------------------------------------------------------
 Copyright (c) 2013, SYSTEC electronic GmbH
 Copyright (c) 2013, Kalycito Infotech Private Ltd.All rights reserved.
-Copyright (c) 2016, Bernecker+Rainer Industrie-Elektronik Ges.m.b.H. (B&R)
+Copyright (c) 2017, B&R Industrial Automation GmbH
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -56,7 +56,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #endif
 
 #if (CONFIG_OBD_USE_STRING_DOMAIN_IN_RAM == FALSE)
-#error "CFM module needs define(CONFIG_OBD_USE_STRING_DOMAIN_IN_RAM == TRUE)"
+#error "CFM module needs define(CONFIG_OBD_USE_STRING_DOMAIN_IN_RAM != FALSE)"
 #endif
 
 //============================================================================//
@@ -398,7 +398,7 @@ tOplkError cfmu_processNodeEvent(UINT nodeId_p,
             obdSize = obdu_getDataSize(0x1F22, subindex);
             // Download only cDCFs with at least one entry
             if (obdSize > 4)
-                pNodeInfo->eventCnProgress.totalNumberOfBytes += (UINT32)obdSize;
+                pNodeInfo->eventCnProgress.totalNumberOfBytes += (size_t)obdSize;
         }
 
         fDoNetConf = TRUE;
@@ -1083,8 +1083,8 @@ static tOplkError sdoWriteObject(tCfmNodeInfo* pNodeInfo_p,
     transParamByIndex.sdoAccessType = kSdoAccessTypeWrite;
     transParamByIndex.sdoComConHdl = pNodeInfo_p->sdoComConHdl;
     transParamByIndex.dataSize = size_p;
-    transParamByIndex.index = pNodeInfo_p->eventCnProgress.objectIndex;
-    transParamByIndex.subindex = pNodeInfo_p->eventCnProgress.objectSubIndex;
+    transParamByIndex.index = (UINT16)pNodeInfo_p->eventCnProgress.objectIndex;
+    transParamByIndex.subindex = (UINT8)pNodeInfo_p->eventCnProgress.objectSubIndex;
     transParamByIndex.pfnSdoFinishedCb = cbSdoCon;
     transParamByIndex.pUserArg = pNodeInfo_p;
 

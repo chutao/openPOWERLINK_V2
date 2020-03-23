@@ -13,7 +13,7 @@ kernel layer are separated by the host interface IP-Core.
 *******************************************************************************/
 
 /*------------------------------------------------------------------------------
-Copyright (c) 2016, Bernecker+Rainer Industrie-Elektronik Ges.m.b.H. (B&R)
+Copyright (c) 2017, B&R Industrial Automation GmbH
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -76,8 +76,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //------------------------------------------------------------------------------
 typedef struct
 {
-    UINT8*  pBase;
-    UINT    span;
+    void*   pBase;
+    size_t  span;
 } tLimInstance;
 
 //------------------------------------------------------------------------------
@@ -165,7 +165,7 @@ The function allocates shared memory for the kernel needed to transfer the PDOs.
 \ingroup module_pdokcal
 */
 //------------------------------------------------------------------------------
-tOplkError pdoucal_allocateMem(size_t memSize_p, UINT8** ppPdoMem_p)
+tOplkError pdoucal_allocateMem(size_t memSize_p, void** ppPdoMem_p)
 {
     // Check parameter validity
     ASSERT(ppPdoMem_p != NULL);
@@ -179,7 +179,7 @@ tOplkError pdoucal_allocateMem(size_t memSize_p, UINT8** ppPdoMem_p)
         return kErrorNoResource;
     }
 
-    *ppPdoMem_p = limPdo_l.pBase;
+    *ppPdoMem_p = (UINT8*)limPdo_l.pBase;
 
     return kErrorOk;
 }
@@ -199,7 +199,7 @@ transferring the PDOs.
 \ingroup module_pdokcal
 */
 //------------------------------------------------------------------------------
-tOplkError pdoucal_freeMem(UINT8* pMem_p, size_t memSize_p)
+tOplkError pdoucal_freeMem(void* pMem_p, size_t memSize_p)
 {
     UNUSED_PARAMETER(pMem_p);
     UNUSED_PARAMETER(memSize_p);

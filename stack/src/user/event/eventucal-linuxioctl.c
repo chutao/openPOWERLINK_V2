@@ -16,7 +16,7 @@ CAL module running in Linux kernelspace.
 *******************************************************************************/
 
 /*------------------------------------------------------------------------------
-Copyright (c) 2016, Bernecker+Rainer Industrie-Elektronik Ges.m.b.H. (B&R)
+Copyright (c) 2016, B&R Industrial Automation GmbH
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -181,7 +181,7 @@ tOplkError eventucal_exit(void)
     if (instance_l.threadId != 0)
     {
         instance_l.fStopThread = TRUE;
-        while (instance_l.fStopThread == TRUE)
+        while (instance_l.fStopThread != FALSE)
         {
             target_msleep(10);
             if (i++ > 1000)

@@ -22,7 +22,8 @@ number of the buffer.
 
 /*------------------------------------------------------------------------------
 Copyright (c) 2013, SYSTEC electronic GmbH
-Copyright (c) 2016, Bernecker+Rainer Industrie-Elektronik Ges.m.b.H. (B&R)
+Copyright (c) 2017, B&R Industrial Automation GmbH
+Copyright (c) 2018, Kalycito Infotech Private Limited
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -263,8 +264,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define EDRV_RXERR_OTHER        0xE2        // Other Error
 
 
-#define EDRV_REGDW_WRITE(dwReg, dwVal)  writel(dwVal, edrvInstance_l.pIoAddr + dwReg)
-#define EDRV_REGDW_READ(dwReg)          readl(edrvInstance_l.pIoAddr + dwReg)
+#define EDRV_REGDW_WRITE(reg, val)      writel(val, (UINT8*)edrvInstance_l.pIoAddr + reg)
+#define EDRV_REGDW_READ(reg)            readl((UINT8*)edrvInstance_l.pIoAddr + reg)
 
 
 #define EDRV_SAMPLE_NUM         10000
@@ -272,13 +273,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 // TracePoint support for realtime-debugging
 #ifdef _DBG_TRACE_POINTS_
-    void TgtDbgSignalTracePoint (UINT8 bTracePointNumber_p);
-    void TgtDbgPostTraceValue (UINT32 dwTraceValue_p);
-    #define TGT_DBG_SIGNAL_TRACE_POINT(p)   TgtDbgSignalTracePoint(p)
-    #define TGT_DBG_POST_TRACE_VALUE(v)     TgtDbgPostTraceValue(v)
+void target_signalTracePoint(UINT8 tracePointNumber_p);
+#define TGT_DBG_SIGNAL_TRACE_POINT(p)   target_signalTracePoint(p)
 #else
-    #define TGT_DBG_SIGNAL_TRACE_POINT(p)
-    #define TGT_DBG_POST_TRACE_VALUE(v)
+#define TGT_DBG_SIGNAL_TRACE_POINT(p)
 #endif
 
 #define EDRV_COUNT_SEND                 TGT_DBG_SIGNAL_TRACE_POINT(2)
@@ -295,12 +293,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define EDRV_COUNT_RX_ERR_SEQ           TGT_DBG_SIGNAL_TRACE_POINT(16)
 #define EDRV_COUNT_RX_ERR_OTHER         TGT_DBG_SIGNAL_TRACE_POINT(17)
 #define EDRV_COUNT_RX_ORUN              TGT_DBG_SIGNAL_TRACE_POINT(18)
-
-#define EDRV_TRACE_CAPR(x)              TGT_DBG_POST_TRACE_VALUE(((x) & 0xFFFF) | 0x06000000)
-#define EDRV_TRACE_RX_CRC(x)            TGT_DBG_POST_TRACE_VALUE(((x) & 0xFFFF) | 0x0E000000)
-#define EDRV_TRACE_RX_ERR(x)            TGT_DBG_POST_TRACE_VALUE(((x) & 0xFFFF) | 0x0F000000)
-#define EDRV_TRACE_RX_PUN(x)            TGT_DBG_POST_TRACE_VALUE(((x) & 0xFFFF) | 0x11000000)
-#define EDRV_TRACE(x)                   TGT_DBG_POST_TRACE_VALUE(((x) & 0xFFFF0000) | 0x0000FEC0)
 
 #define EDRV_DIAG_HISTORY_COUNT     14
 
@@ -349,14 +341,14 @@ typedef struct
 
     tEdrvRxDesc*    pRxDesc;                                ///< Pointer to the RX descriptors
     dma_addr_t      pRxDescDma;                             ///< Pointer to the RX descriptor DMA
-    UINT8*          apRxBufInDesc[EDRV_MAX_RX_DESCS];       ///< Stack of free RX buffers +1 additional place if ReleaseRxBuffer is called before return of RxHandler (multi processor)
-    UINT8*          apRxBufFree[EDRV_MAX_RX_BUFFERS - EDRV_MAX_RX_DESCS + 1];
+    void*           apRxBufInDesc[EDRV_MAX_RX_DESCS];       ///< Stack of free RX buffers +1 additional place if ReleaseRxBuffer is called before return of RxHandler (multi processor)
+    void*           apRxBufFree[EDRV_MAX_RX_BUFFERS - EDRV_MAX_RX_DESCS + 1];
                                                             ///< Array of free RX buffers
-    INT             rxBufFreeTop;                           ///< Index of the top of the free RX buffer array
+    int             rxBufFreeTop;                           ///< Index of the top of the free RX buffer array
     spinlock_t      spinLockRxBufRelease;                   ///< Spinlock for protecting the RX buffer release
-    INT             pageAllocations;                        ///< Counter of allocated pages
+    int             pageAllocations;                        ///< Counter of allocated pages
 
-    UINT8*          pTxBuf;                                 ///< Pointer to the TX buffer
+    void*           pTxBuf;                                 ///< Pointer to the TX buffer
     dma_addr_t      pTxBufDma;                              ///< Pointer to the DMA of the TX buffer
     tEdrvTxDesc*    pTxDesc;                                ///< Pointer to the TX descriptors
     dma_addr_t      pTxDescDma;                             ///< Pointer to the DMA of the TX descriptors
@@ -370,17 +362,18 @@ typedef struct
 
 #if (CONFIG_EDRV_USE_DIAGNOSTICS != FALSE)
     ULONGLONG       interruptCount;                         ///< Interrupt counter
-    INT             rxBufFreeMin;                           ///< Minimum number of free RX buffers
+    int             rxBufFreeMin;                           ///< Minimum number of free RX buffers
     UINT            rxCount[EDRV_SAMPLE_NUM];               ///< Array of RX counter samples
     UINT            txCount[EDRV_SAMPLE_NUM];               ///< Array of TX counter samples
     UINT            pos;                                    ///< Current sample position
 #endif
+    BOOL            fIrqHandlerEnabled;                     ///< Flag indicating whether the IRQ handler is enabled
 } tEdrvInstance;
 
 //------------------------------------------------------------------------------
 // local function prototypes
 //------------------------------------------------------------------------------
-static irqreturn_t edrvIrqHandler (int irqNum_p, void* ppDevInstData_p);
+static irqreturn_t edrvIrqHandler (int irqNum_p, void* pDevInstData_p);
 static int initOnePciDev(struct pci_dev* pPciDev_p, const struct pci_device_id* pId_p);
 static void removeOnePciDev(struct pci_dev* pPciDev_p);
 
@@ -388,13 +381,18 @@ static void removeOnePciDev(struct pci_dev* pPciDev_p);
 // local vars
 //------------------------------------------------------------------------------
 // buffers and buffer descriptors and pointers
+
 static struct pci_device_id aEdrvPciTbl_l[] =
 {
     {0x8086, 0x109a, PCI_ANY_ID, PCI_ANY_ID, 0, 0, 0},  // 82573L
     {0x8086, 0x1501, PCI_ANY_ID, PCI_ANY_ID, 0, 0, 0},  // 82567V
     {0x8086, 0x150c, PCI_ANY_ID, PCI_ANY_ID, 0, 0, 0},  // 82583V
-    {0x8086, 0x10de, PCI_ANY_ID, PCI_ANY_ID, 0, 0, 0},  // 82567LM
+    {0x8086, 0x10e5, PCI_ANY_ID, PCI_ANY_ID, 0, 0, 0},  // 82567LM ICH 9
+    {0x8086, 0x10f5, PCI_ANY_ID, PCI_ANY_ID, 0, 0, 0},  // 82567LM ICH 9M
+    {0x8086, 0x10cc, PCI_ANY_ID, PCI_ANY_ID, 0, 0, 0},  // 82567LM ICH 10
+    {0x8086, 0x10de, PCI_ANY_ID, PCI_ANY_ID, 0, 0, 0},  // 82567LM ICH 10D
     {0x8086, 0x10d3, PCI_ANY_ID, PCI_ANY_ID, 0, 0, 0},  // 82574L
+    {0x8086, 0x100E, PCI_ANY_ID, PCI_ANY_ID, 0, 0, 0},  // 82540EM
     {0, }
 };
 MODULE_DEVICE_TABLE(pci, aEdrvPciTbl_l);
@@ -430,7 +428,7 @@ tOplkError edrv_init(const tEdrvInitParam* pEdrvInitParam_p)
 {
     tOplkError  ret = kErrorOk;
     int         result;
-    INT         i;
+    int         i;
     tBufData    bufData;
 
     // Check parameter validity
@@ -453,14 +451,14 @@ tOplkError edrv_init(const tEdrvInitParam* pEdrvInitParam_p)
     result = pci_register_driver(&edrvDriver_l);
     if (result != 0)
     {
-        printk("%s pci_register_driver failed with %d\n", __FUNCTION__, result);
+        printk("%s pci_register_driver failed with %d\n", __func__, result);
         ret = kErrorNoResource;
         goto Exit;
     }
 
     if (edrvInstance_l.pPciDev == NULL)
     {
-        printk("%s pPciDev=NULL\n", __FUNCTION__);
+        printk("%s pPciDev=NULL\n", __func__);
         edrv_exit();
         ret = kErrorNoResource;
         goto Exit;
@@ -476,13 +474,13 @@ tOplkError edrv_init(const tEdrvInitParam* pEdrvInitParam_p)
     for (i = 0; i < EDRV_MAX_TX_BUFFERS; i++)
     {
         bufData.bufferNumber = i;
-        bufData.pBuffer = edrvInstance_l.pTxBuf + (i * EDRV_MAX_FRAME_SIZE);
+        bufData.pBuffer = (UINT8*)edrvInstance_l.pTxBuf + (i * EDRV_MAX_FRAME_SIZE);
 
         bufalloc_addBuffer(pBufAlloc_l, &bufData);
     }
 
     // local MAC address might have been changed in initOnePciDev
-    printk("%s local MAC = ", __FUNCTION__);
+    printk("%s local MAC = ", __func__);
     for (i = 0; i < 6; i++)
     {
         printk("%02X ", (UINT)edrvInstance_l.initParam.aMacAddr[i]);
@@ -508,7 +506,7 @@ tOplkError edrv_exit(void)
 {
     if (edrvDriver_l.name != NULL)
     {
-        printk("%s calling pci_unregister_driver()\n", __FUNCTION__);
+        printk("%s calling pci_unregister_driver()\n", __func__);
         pci_unregister_driver(&edrvDriver_l);
         // clear buffer allocation
         bufalloc_exit(pBufAlloc_l);
@@ -518,7 +516,7 @@ tOplkError edrv_exit(void)
     }
     else
     {
-        printk("%s PCI driver for openPOWERLINK already unregistered\n", __FUNCTION__);
+        printk("%s PCI driver for openPOWERLINK already unregistered\n", __func__);
     }
 
     return kErrorOk;
@@ -557,7 +555,7 @@ tOplkError edrv_setRxMulticastMacAddr(const UINT8* pMacAddr_p)
 {
     tOplkError  ret = kErrorOk;
     UINT32      data;
-    INT         i;
+    int         i;
 
     // Check parameter validity
     ASSERT(pMacAddr_p != NULL);
@@ -574,7 +572,7 @@ tOplkError edrv_setRxMulticastMacAddr(const UINT8* pMacAddr_p)
 
     if (i == 16)
     {   // no free entry found
-        printk("%s Implementation of Multicast Table Array support required\n", __FUNCTION__);
+        printk("%s Implementation of Multicast Table Array support required\n", __func__);
         ret = kErrorEdrvInit;
         goto Exit;
     }
@@ -615,7 +613,7 @@ tOplkError edrv_clearRxMulticastMacAddr(const UINT8* pMacAddr_p)
 {
     tOplkError  ret = kErrorOk;
     UINT32      data;
-    INT         i;
+    int         i;
     UINT32      addrLow;
     UINT32      addrHigh;
 
@@ -712,7 +710,7 @@ tOplkError edrv_allocTxBuffer(tEdrvTxBuffer* pBuffer_p)
 
     if (edrvInstance_l.pTxBuf == NULL)
     {
-        printk("%s Tx buffers currently not allocated\n", __FUNCTION__);
+        printk("%s Tx buffers currently not allocated\n", __func__);
         ret = kErrorEdrvNoFreeBufEntry;
         goto Exit;
     }
@@ -942,7 +940,7 @@ int edrv_getDiagnostics(char* pBuffer_p, size_t size_p)
         UINT    aHistoryTx[EDRV_DIAG_HISTORY_COUNT];
         UINT    historyRxMax;
         UINT    historyTxMax;
-        INT     i;
+        int     i;
 
         for (i = 0; i < EDRV_SAMPLE_NUM; i++)
         {
@@ -1066,18 +1064,18 @@ tOplkError edrv_releaseRxBuffer(tEdrvRxBuffer* pRxBuffer_p)
 This function is the interrupt service routine for the Ethernet driver.
 
 \param[in]      irqNum_p            IRQ number
-\param[in,out]  ppDevInstData_p     Pointer to private data provided by request_irq
+\param[in,out]  pDevInstData_p      Pointer to private data provided by request_irq
 
 \return The function returns an IRQ handled code.
 */
 //------------------------------------------------------------------------------
-static irqreturn_t edrvIrqHandler(int irqNum_p, void* ppDevInstData_p)
+static irqreturn_t edrvIrqHandler(int irqNum_p, void* pDevInstData_p)
 {
-    UINT32  status;
-    INT     handled = IRQ_HANDLED;
+    UINT32      status;
+    irqreturn_t handled = IRQ_HANDLED;
 
     UNUSED_PARAMETER(irqNum_p);
-    UNUSED_PARAMETER(ppDevInstData_p);
+    UNUSED_PARAMETER(pDevInstData_p);
 
     // Read the interrupt status
     status = EDRV_REGDW_READ(EDRV_REGDW_ICR);
@@ -1109,7 +1107,7 @@ static irqreturn_t edrvIrqHandler(int irqNum_p, void* ppDevInstData_p)
 
         if (edrvInstance_l.pTxBuf == NULL)
         {
-            printk("%s Tx buffers currently not allocated\n", __FUNCTION__);
+            printk("%s Tx buffers currently not allocated\n", __func__);
             goto Exit;
         }
 
@@ -1157,7 +1155,7 @@ static irqreturn_t edrvIrqHandler(int irqNum_p, void* ppDevInstData_p)
                     }
                     else
                     {   // Packet is OK
-                        UINT8**  ppRxBufInDesc;
+                        void**  ppRxBufInDesc;
 
                         rxBuffer.bufferInFrame = kEdrvBufferLastInFrame;
 
@@ -1181,7 +1179,7 @@ static irqreturn_t edrvIrqHandler(int irqNum_p, void* ppDevInstData_p)
                             if (edrvInstance_l.rxBufFreeTop >= 0)
                             {
                                 dma_addr_t  dmaAddr;
-                                UINT8*      pRxBufInDescPrev;
+                                void*       pRxBufInDescPrev;
                                 ULONG       flags;
 
 #if (CONFIG_EDRV_USE_DIAGNOSTICS != FALSE)
@@ -1202,11 +1200,11 @@ static irqreturn_t edrvIrqHandler(int irqNum_p, void* ppDevInstData_p)
                                                      (dma_addr_t)ami_getUint64Le(&pRxDesc->bufferAddr_le),
                                                      EDRV_RX_BUFFER_SIZE, PCI_DMA_FROMDEVICE);
 
-                                    dmaAddr = pci_map_single(edrvInstance_l.pPciDev, (void*)*ppRxBufInDesc,
+                                    dmaAddr = pci_map_single(edrvInstance_l.pPciDev, *ppRxBufInDesc,
                                                              EDRV_RX_BUFFER_SIZE, PCI_DMA_FROMDEVICE);
                                     if (pci_dma_mapping_error(edrvInstance_l.pPciDev, dmaAddr))
                                     {
-                                        printk("%s DMA mapping error\n", __FUNCTION__);
+                                        printk("%s DMA mapping error\n", __func__);
                                         // $$$ Signal dma mapping error
                                     }
 
@@ -1356,20 +1354,20 @@ static int initOnePciDev(struct pci_dev* pPciDev_p, const struct pci_device_id* 
     int     result = 0;
     UINT32  temp;
     UINT64  descAddress;
-    INT     i;
+    int     i;
     UINT    order;
     UINT    rxBuffersInAllocation;
     UINT    rxBuffer;
 
     if (edrvInstance_l.pPciDev != NULL)
     {   // Edrv is already connected to a PCI device
-        printk("%s device %s discarded\n", __FUNCTION__, pci_name(pPciDev_p));
+        printk("%s device %s discarded\n", __func__, pci_name(pPciDev_p));
         result = -ENODEV;
         goto Exit;
     }
 
     // enable device
-    printk("%s enable device\n", __FUNCTION__);
+    printk("%s enable device\n", __func__);
     result = pci_enable_device(pPciDev_p);
     if (result != 0)
     {
@@ -1380,7 +1378,7 @@ static int initOnePciDev(struct pci_dev* pPciDev_p, const struct pci_device_id* 
 
     if (edrvInstance_l.pPciDev == NULL)
     {
-        printk("%s pPciDev_p==NULL\n", __FUNCTION__);
+        printk("%s pPciDev_p==NULL\n", __func__);
     }
 
     result = pci_request_regions(pPciDev_p, DRV_NAME);
@@ -1416,7 +1414,9 @@ static int initOnePciDev(struct pci_dev* pPciDev_p, const struct pci_device_id* 
 
         msleep(1);
     }
-    if (i == 0)
+
+    // From Intel documentation for 82540EM: this controller can't ack the 64-bit write when issuing the reset
+    if ((i == 0) && !((pId_p->vendor == 0x8086) && (pId_p->device == 0x100E)))
     {
         result = -EIO;
         goto ExitFail;
@@ -1502,7 +1502,7 @@ static int initOnePciDev(struct pci_dev* pPciDev_p, const struct pci_device_id* 
     result = pci_enable_msi(pPciDev_p);
     if (result != 0)
     {
-        printk("%s Could not enable MSI\n", __FUNCTION__);
+        printk("%s Could not enable MSI\n", __func__);
     }
 
     // install interrupt handler
@@ -1511,6 +1511,7 @@ static int initOnePciDev(struct pci_dev* pPciDev_p, const struct pci_device_id* 
     {
         goto ExitFail;
     }
+    edrvInstance_l.fIrqHandlerEnabled = TRUE;
 
     // allocate buffers
     result = pci_set_dma_mask(pPciDev_p, DMA_BIT_MASK(32));
@@ -1577,11 +1578,11 @@ static int initOnePciDev(struct pci_dev* pPciDev_p, const struct pci_device_id* 
         {
             if (rxBuffer < EDRV_MAX_RX_DESCS)
             {   // Insert rx-buffer in rx-descriptor
-                edrvInstance_l.apRxBufInDesc[rxBuffer] = (UINT8*)bufferPointer;
+                edrvInstance_l.apRxBufInDesc[rxBuffer] = (void*)bufferPointer;
             }
             else
             {   // Insert rx-buffer in free-rx-buffer stack
-                edrvInstance_l.apRxBufFree[rxBuffer - EDRV_MAX_RX_DESCS] = (UINT8*)bufferPointer;
+                edrvInstance_l.apRxBufFree[rxBuffer - EDRV_MAX_RX_DESCS] = (void*)bufferPointer;
             }
 
             rxBuffer++;
@@ -1640,7 +1641,7 @@ static int initOnePciDev(struct pci_dev* pPciDev_p, const struct pci_device_id* 
         dma_addr_t  dmaAddr;
 
         // get dma streaming
-        dmaAddr = pci_map_single(edrvInstance_l.pPciDev, (void*)edrvInstance_l.apRxBufInDesc[i],
+        dmaAddr = pci_map_single(edrvInstance_l.pPciDev, edrvInstance_l.apRxBufInDesc[i],
                                  EDRV_RX_BUFFER_SIZE, PCI_DMA_FROMDEVICE);
         if (pci_dma_mapping_error(edrvInstance_l.pPciDev, dmaAddr))
         {
@@ -1684,7 +1685,7 @@ static int initOnePciDev(struct pci_dev* pPciDev_p, const struct pci_device_id* 
     EDRV_REGDW_WRITE(EDRV_REGDW_IMS, EDRV_REGDW_INT_MASK_DEF);
 
     // wait until link is up
-    printk("%s waiting for link up...\n", __FUNCTION__);
+    printk("%s waiting for link up...\n", __func__);
     for (i = EDRV_LINK_UP_TIMEOUT; i > 0; i -= 100)
     {
         if ((EDRV_REGDW_READ(EDRV_REGDW_STATUS) & EDRV_REGDW_STATUS_LU) != 0)
@@ -1706,7 +1707,7 @@ ExitFail:
     removeOnePciDev(pPciDev_p);
 
 Exit:
-    printk("%s finished with %d\n", __FUNCTION__, result);
+    printk("%s finished with %d\n", __func__, result);
     return result;
 }
 
@@ -1743,7 +1744,11 @@ static void removeOnePciDev(struct pci_dev* pPciDev_p)
     }
 
     // remove interrupt handler
-    free_irq(pPciDev_p->irq, pPciDev_p);
+    if (edrvInstance_l.fIrqHandlerEnabled)
+    {
+        free_irq(pPciDev_p->irq, pPciDev_p);
+        edrvInstance_l.fIrqHandlerEnabled = FALSE;
+    }
 
     // Disable Message Signaled Interrupt
     pci_disable_msi(pPciDev_p);
@@ -1789,7 +1794,7 @@ static void removeOnePciDev(struct pci_dev* pPciDev_p)
 
     if (edrvInstance_l.rxBufFreeTop < EDRV_MAX_RX_BUFFERS-EDRV_MAX_RX_DESCS - 1)
     {
-        printk("%s %d rx-buffers were lost\n", __FUNCTION__, edrvInstance_l.rxBufFreeTop);
+        printk("%s %d rx-buffers were lost\n", __func__, edrvInstance_l.rxBufFreeTop);
     }
 
     for (; edrvInstance_l.rxBufFreeTop >= 0; edrvInstance_l.rxBufFreeTop--)
@@ -1805,11 +1810,11 @@ static void removeOnePciDev(struct pci_dev* pPciDev_p)
 
     if (edrvInstance_l.pageAllocations > 0)
     {
-        printk("%s Less pages freed than allocated (%d)\n", __FUNCTION__, edrvInstance_l.pageAllocations);
+        printk("%s Less pages freed than allocated (%d)\n", __func__, edrvInstance_l.pageAllocations);
     }
     else if (edrvInstance_l.pageAllocations < 0)
     {
-        printk("%s Attempted to free more pages than allocated (%d)\n", __FUNCTION__, (edrvInstance_l.pageAllocations * -1));
+        printk("%s Attempted to free more pages than allocated (%d)\n", __func__, (edrvInstance_l.pageAllocations * -1));
     }
 
     if (edrvInstance_l.pRxDesc != NULL)

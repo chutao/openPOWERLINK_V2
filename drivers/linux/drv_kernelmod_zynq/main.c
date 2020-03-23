@@ -11,7 +11,7 @@ for the openPOWERLINK kernel stack.
 *******************************************************************************/
 
 /*------------------------------------------------------------------------------
-Copyright (c) 2016, Bernecker+Rainer Industrie-Elektronik Ges.m.b.H. (B&R)
+Copyright (c) 2016, B&R Industrial Automation GmbH
 Copyright (c) 2017, Kalycito Private Limited
 All rights reserved.
 
@@ -176,6 +176,9 @@ static int          getEventForUser(unsigned long arg_p);
 static int          postEventFromUser(unsigned long arg_p);
 static int          writeFileBuffer(unsigned long arg_p);
 static int          getFileBufferSize(unsigned long arg_p);
+#if defined(CONFIG_INCLUDE_SOC_TIME_FORWARD)
+static int          getSocTimestampAddress(unsigned long arg_p);
+#endif
 
 //------------------------------------------------------------------------------
 //  Kernel module specific data structures
@@ -581,6 +584,12 @@ static int plkIntfIoctl(struct inode* pInode_p,
             ret = getFileBufferSize(arg_p);
             break;
 
+#if defined(CONFIG_INCLUDE_SOC_TIME_FORWARD)
+        case PLK_CMD_TIMESYNC_MAP_OFFSET:
+            ret = getSocTimestampAddress(arg_p);
+            break;
+#endif
+
         default:
             DEBUG_LVL_ERROR_TRACE("PLK: - Invalid command (cmd=%d type=%d)\n",
                                   _IOC_NR(cmd_p),
@@ -823,7 +832,7 @@ static int postEventFromUser(unsigned long arg_p)
 {
     tOplkError  ret = kErrorOk;
     tEvent      event;
-    UINT8*      pArg = NULL;
+    void*       pArg = NULL;
     INT         order = 0;
 
     if (copy_from_user(&event, (const void __user*)arg_p, sizeof(tEvent)))
@@ -832,9 +841,9 @@ static int postEventFromUser(unsigned long arg_p)
     if (event.eventArgSize != 0)
     {
         order = get_order(event.eventArgSize);
-        pArg = (UINT8*)__get_free_pages(GFP_KERNEL, order);
+        pArg = (void*)__get_free_pages(GFP_KERNEL, order);
 
-        if (!pArg)
+        if (pArg == NULL)
             return -EIO;
 
         if (copy_from_user(pArg, (const void __user*)event.eventArg.pEventArg, event.eventArgSize))
@@ -843,7 +852,7 @@ static int postEventFromUser(unsigned long arg_p)
             return -EFAULT;
         }
 
-        event.eventArg.pEventArg = (void*)pArg;
+        event.eventArg.pEventArg = pArg;
     }
 
     switch (event.eventSink)
@@ -1165,5 +1174,36 @@ static int getFileBufferSize(unsigned long arg_p)
 
     return ret;
 }
+
+#if defined(CONFIG_INCLUDE_SOC_TIME_FORWARD)
+//------------------------------------------------------------------------------
+/**
+\brief  Get timesync SoC timestamp kernel address
+
+The function implements the ioctl for getting the timesync shared memory pointer.
+
+\param[in]      arg_p               Pointer to the timesync shared memory argument
+                                    passed by the ioctl interface.
+
+\return The function returns Linux error code.
+*/
+//------------------------------------------------------------------------------
+static int getSocTimestampAddress(unsigned long arg_p)
+{
+    tTimesyncSharedMemory* pSharedMemory;
+
+    // Gets the kernel address of timesync shared memory from timesync kernel CAL
+    pSharedMemory = timesynckcal_getSharedMemory();
+
+    if (pSharedMemory == NULL)
+        return -ENXIO;
+
+    // Copy the received kernel address to timesync user CAL
+    if (copy_to_user((void __user*)arg_p, &pSharedMemory, sizeof(ULONG)))
+        return -EFAULT;
+
+    return 0;
+}
+#endif
 
 /// \}

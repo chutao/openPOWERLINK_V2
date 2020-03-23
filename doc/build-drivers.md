@@ -63,10 +63,17 @@ To build the kernel space driver, the appropriate kernel sources must be install
 on your system. The path to the kernel sources can be configured by
 __CFG_KERNEL_DIR__.
 
-To build the kernel interface driver for Zynq hybrid:
+To build the kernel interface driver for Zynq hybrid MN:
 
       > cd <openPOWERLINK_dir>/drivers/linux/drv_kernelmod_zynq/build
-      > cmake -DCFG_OPLK_MN=TRUE -CMAKE_TOOLCHAIN_FILE=<openPOWERLINK_dir>/cmake/toolchain-xilinx-vivado-arm-linux-eabi-gnu.cmake
+      > cmake -DCFG_OPLK_MN=TRUE -CMAKE_TOOLCHAIN_FILE=<openPOWERLINK_dir>/cmake/toolchain-xilinx-vivado-arm-linux-eabi-gnu.cmake ..
+      > make
+      > make install
+
+To build the kernel interface driver for Zynq hybrid CN:
+
+      > cd <openPOWERLINK_dir>/drivers/linux/drv_kernelmod_zynq/build
+      > cmake -DCFG_OPLK_MN=FALSE -CMAKE_TOOLCHAIN_FILE=<openPOWERLINK_dir>/cmake/toolchain-xilinx-vivado-arm-linux-eabi-gnu.cmake ..
       > make
       > make install
 
@@ -90,17 +97,29 @@ Windows Driver Kit (WDK) 8.1 for compilation.
 Follow the steps below to build the NDIS driver on a Windows system using MSbuild.
 Open a Visual Studio command line and enter the following commands:
 
-* Build driver for Windows 7 (64 bit) in debug mode
+* Build driver for Windows 7 & 10 (64 bit) in debug mode
 
       > cd <openPOWERLINK_dir>\drivers\windows\drv_ndis_[pcie;intermediate]\build
       > cmake -G"NMake Makefiles" -DCMAKE_BUILD_TYPE=Debug ..
       > msbuild /t:build /p:Platform=x64 /p:Configuration="Win7 Debug"
 
-* Build driver for Windows 7 (64 bit) in release mode
+* Build driver for Windows 7 & 10 (64 bit) in release mode
 
       > cd <openPOWERLINK_dir>\drivers\windows\drv_ndis_[pcie;intermediate]\build
       > cmake -G"NMake Makefiles" -DCMAKE_BUILD_TYPE=Release ..
       > msbuild /t:build /p:Platform=x64 /p:Configuration="Win7 Release"
+
+* Build driver for Windows 7 & 10 (32 bit) in debug mode
+
+      > cd <openPOWERLINK_dir>\drivers\windows\drv_ndis_[pcie;intermediate]\build
+      > cmake -G"NMake Makefiles" -DCMAKE_BUILD_TYPE=Debug ..
+      > msbuild /t:build /p:Platform=Win32 /p:Configuration="Win7 Debug"
+
+* Build driver for Windows 7 & 10 (32 bit) in release mode
+
+      > cd <openPOWERLINK_dir>\drivers\windows\drv_ndis_[pcie;intermediate]\build
+      > cmake -G"NMake Makefiles" -DCMAKE_BUILD_TYPE=Release ..
+      > msbuild /t:build /p:Platform=Win32 /p:Configuration="Win7 Release"
 
 `Platform` and `Configuration` parameters can be modified to compile the driver for
 a different platform and Windows version.
@@ -116,7 +135,7 @@ The PCP daemon uses the driver library for the host interface (`liboplkmndrv-hos
 To build the PCP daemon:
 
       > cd <openPOWERLINK_dir>/drivers/xilinx-microblaze/drv_daemon/build
-      > cmake -G"Unix Makefiles" -DCMAKE_TOOLCHAIN_FILE=../../../cmake/toolchain-xilinx-ise-microblaze-gnu.cmake ../.. -DCMAKE_BUILD_TYPE=Release ..
+      > cmake -G"Unix Makefiles" -DCMAKE_TOOLCHAIN_FILE=../../../cmake/toolchain-xilinx-ise-microblaze-gnu.cmake -DCMAKE_BUILD_TYPE=Release ..
       > make
       > make install
 
@@ -126,19 +145,35 @@ This section will explain the steps to build the PCP daemon for a Microblaze
 softcore processor with host interface by using the Vivado toolchain.
 The PCP daemon uses the driver library for the host interface (`liboplkmndrv-dualprocshm`).
 
-To build the PCP daemon:
+To build the MN PCP daemon:
 
   * On a Windows host platform
 
         > cd <openPOWERLINK_dir>/drivers/xilinx-microblaze/drv_daemon/build
-        > cmake -GUnix\ Makefiles -DCMAKE_TOOLCHAIN_FILE=../../../cmake/toolchain-xilinx-microblaze-gnu.cmake ../.. -DCMAKE_BUILD_TYPE=Release ..
+        > cmake -GUnix\ Makefiles -DCMAKE_TOOLCHAIN_FILE=../../../../cmake/toolchain-xilinx-microblaze-gnu.cmake -DCMAKE_BUILD_TYPE=Release -DCFG_BUILD_KERNEL_STACK="PCP Daemon Dual-Proc" -DCFG_HW_LIB=xilinx-z702/mn-dual-shmem-gpio ..
         > make
         > make install
 
   * On a Linux host platform
 
         > cd <openPOWERLINK_dir>/drivers/xilinx-microblaze/drv_daemon/build
-        > cmake -DCMAKE_TOOLCHAIN_FILE=../../../cmake/toolchain-xilinx-microblaze-gnu.cmake ../.. -DCMAKE_BUILD_TYPE=Release ..
+        > cmake -GUnix\ Makefiles -DCMAKE_TOOLCHAIN_FILE=../../../../cmake/toolchain-xilinx-microblaze-gnu.cmake -DCMAKE_BUILD_TYPE=Release -DCFG_BUILD_KERNEL_STACK="PCP Daemon Dual-Proc" -DCFG_HW_LIB=xilinx-z702/mn-dual-shmem-gpio ..
+        > make
+        > make install
+
+To build the CN PCP daemon:
+
+  * On a Windows host platform
+
+        > cd <openPOWERLINK_dir>/drivers/xilinx-microblaze/drv_daemon/build
+        > cmake -GUnix\ Makefiles -DCMAKE_TOOLCHAIN_FILE=../../../../cmake/toolchain-xilinx-microblaze-gnu.cmake -DCMAKE_BUILD_TYPE=Release -DCFG_BUILD_KERNEL_STACK="PCP Daemon Dual-Proc" -DCFG_HW_LIB=xilinx-z702/cn-dual-shmem-gpio -DCFG_OPLK_MN=OFF ..
+        > make
+        > make install
+
+  * On a Linux host platform
+
+        > cd <openPOWERLINK_dir>/drivers/xilinx-microblaze/drv_daemon/build
+        > cmake -GUnix\ Makefiles -DCMAKE_TOOLCHAIN_FILE=../../../../cmake/toolchain-xilinx-microblaze-gnu.cmake -DCMAKE_BUILD_TYPE=Release -DCFG_BUILD_KERNEL_STACK="PCP Daemon Dual-Proc" -DCFG_HW_LIB=xilinx-z702/cn-dual-shmem-gpio -DCFG_OPLK_MN=OFF ..
         > make
         > make install
 
@@ -198,8 +233,9 @@ To build the PCP daemon:
   - **8139**: Realtek 8139-based network interface cards (100 MBit/s)
   - **8111**: Realtek 8111/8168 network interface cards (1 GBit/s)
   - **8255x**: Intel 8255x-based network interface cards (100 MBit/s)
-  - **82573**: Intel 82573-based network interface cards (1 GBit/s)
-  - **i210**: Intel I210-based network interface cards (1 GBit/s)
+  - **82573**: Intel Gigabit network interface cards (1 GBit/s)
+               (supported chipsets: 82573L, 82567V, 82583V, 82567LM, 82574L, 82540EM)
+  - **i210**:  Intel I210-based network interface cards (1 GBit/s)
   - **emacps**: Zynq Emac network interface controller (1 GBit/s)
 
   Several kernel drivers can be built at once, just append another

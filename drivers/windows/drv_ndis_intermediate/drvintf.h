@@ -9,8 +9,8 @@ Driver interface for the kernel daemon - Header file
 *******************************************************************************/
 
 /*------------------------------------------------------------------------------
-Copyright (c) 2015, Kalycito Infotech Private Limited
-Copyright (c) 2016, Bernecker+Rainer Industrie-Elektronik Ges.m.b.H. (B&R)
+Copyright (c) 2017, Kalycito Infotech Private Limited
+Copyright (c) 2016, B&R Industrial Automation GmbH
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -44,6 +44,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <common/driver.h>
 #include <common/ctrl.h>
 #include <common/ctrlcal-mem.h>
+#include <kernel/ctrlk.h>
 
 //------------------------------------------------------------------------------
 // const defines
@@ -87,6 +88,11 @@ tOplkError drv_mapPdoMem(void** ppKernelMem_p,
                          size_t* pMemSize_p);
 void       drv_unMapPdoMem(void* pMem_p,
                            size_t memSize_p);
+#if defined(CONFIG_INCLUDE_SOC_TIME_FORWARD)
+tOplkError drv_mapSocMem(void** ppUserMem_p,
+                         size_t* pMemSize_p);
+void       drv_unMapSocMem(void);
+#endif
 
 #ifdef __cplusplus
 }

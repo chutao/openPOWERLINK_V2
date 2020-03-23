@@ -60,18 +60,29 @@
   <PropertyGroup />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|Win32'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
+    <OutDir>..\$(Platform)\$(ConfigurationName)\</OutDir>
+    <IntDir>$(TargetName).dir\Debug\</IntDir>
+    <TargetName>$(TargetName.Replace(' ',''))</TargetName>
+    <EnableInf2cat>false</EnableInf2cat>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Release|Win32'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
+    <OutDir>..\$(Platform)\$(ConfigurationName)\</OutDir>
+    <IntDir>$(TargetName).dir\Debug\</IntDir>
+    <TargetName>$(TargetName.Replace(' ',''))</TargetName>
+    <EnableInf2cat>false</EnableInf2cat>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|x64'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
+    <IntDir>$(TargetName).dir\Debug\</IntDir>
     <TargetName>$(TargetName.Replace(' ',''))</TargetName>
+    <EnableInf2cat>false</EnableInf2cat>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Release|x64'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
     <IntDir>$(TargetName).dir\Release\</IntDir>
     <TargetName>$(TargetName.Replace(' ',''))</TargetName>
+    <EnableInf2cat>false</EnableInf2cat>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|Win32'">
     <ClCompile>
@@ -88,7 +99,13 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>%(AdditionalDependencies);$(KernelBufferOverflowLib);$(DDK_LIB_PATH)\ntoskrnl.lib;$(DDK_LIB_PATH)\hal.lib;$(DDK_LIB_PATH)\wmilib.lib;$(DDK_LIB_PATH)\ndis.lib</AdditionalDependencies>
+      <GenerateMapFile>true</GenerateMapFile>
+      <MapExports>true</MapExports>
+      <AssemblyDebug>true</AssemblyDebug>
     </Link>
+    <Inf>
+      <TimeStamp>2.2.0.0</TimeStamp>
+    </Inf>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Release|Win32'">
     <ClCompile>
@@ -98,14 +115,20 @@
       <Optimization>MaxSpeed</Optimization>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <FavorSizeOrSpeed>Neither</FavorSizeOrSpeed>
-      <PreprocessorDefinitions>CONFIG_MN;_X86_=1;i386=1;STD_CALL;NDIS60;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>CONFIG_MN;NDEBUG;_X86_=1;i386=1;STD_CALL;NDIS60;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AssemblerListingLocation>Release/</AssemblerListingLocation>
       <DisableSpecificWarnings>4100;4603;4627;4986;4987;4996;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <AdditionalOptions>%(AdditionalOptions)  /GS</AdditionalOptions>
     </ClCompile>
     <Link>
       <AdditionalDependencies>%(AdditionalDependencies);$(KernelBufferOverflowLib);$(DDK_LIB_PATH)\ntoskrnl.lib;$(DDK_LIB_PATH)\hal.lib;$(DDK_LIB_PATH)\wmilib.lib;$(DDK_LIB_PATH)\ndis.lib</AdditionalDependencies>
+      <GenerateMapFile>true</GenerateMapFile>
+      <MapExports>true</MapExports>
+      <AssemblyDebug>true</AssemblyDebug>
     </Link>
+    <Inf>
+      <TimeStamp>2.2.0.0</TimeStamp>
+    </Inf>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|x64'">
     <ClCompile>
@@ -138,7 +161,7 @@
       <Optimization>MaxSpeed</Optimization>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <FavorSizeOrSpeed>Neither</FavorSizeOrSpeed>
-      <PreprocessorDefinitions>_WIN64;_AMD64_;AMD64;CONFIG_MN;%(PreprocessorDefinitions);NDIS60</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_WIN64;NDEBUG;_AMD64_;AMD64;CONFIG_MN;%(PreprocessorDefinitions);NDIS60</PreprocessorDefinitions>
       <AssemblerListingLocation>Release/</AssemblerListingLocation>
       <CallingConvention>Cdecl</CallingConvention>
       <CompileAs>CompileAsC</CompileAs>

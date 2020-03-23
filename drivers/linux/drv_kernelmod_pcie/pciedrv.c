@@ -16,7 +16,7 @@ openPOWERLINK driver.
 
 /*------------------------------------------------------------------------------
 Copyright (c) 2015, Kalycito Infotech Private Limited
-Copyright (c) 2016, Bernecker+Rainer Industrie-Elektronik Ges.m.b.H. (B&R)
+Copyright (c) 2016, B&R Industrial Automation GmbH
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -361,7 +361,7 @@ static irqreturn_t pcieDrvIrqHandler(int irqNum_p,
     // Currently only sync interrupt is produced by the PCIe, check if the user
     // wants the irq to be forwarded
     if ((pcieDrvInstance_l.pfnCbSync != NULL) &&
-        (pcieDrvInstance_l.fSyncEnabled == TRUE))
+        (pcieDrvInstance_l.fSyncEnabled != FALSE))
     {
         // User wants the interrupt, forward it without any argument
         pcieDrvInstance_l.pfnCbSync();

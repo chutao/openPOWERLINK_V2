@@ -13,7 +13,7 @@ userspace platform. It uses the circular buffer interface for all event queues.
 *******************************************************************************/
 
 /*------------------------------------------------------------------------------
-Copyright (c) 2016, Bernecker+Rainer Industrie-Elektronik Ges.m.b.H. (B&R)
+Copyright (c) 2016, B&R Industrial Automation GmbH
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -206,10 +206,10 @@ tOplkError eventkcal_exit(void)
 {
     UINT    i = 0;
 
-    if (instance_l.fInitialized == TRUE)
+    if (instance_l.fInitialized != FALSE)
     {
         instance_l.fStopThread = TRUE;
-        while (instance_l.fStopThread == TRUE)
+        while (instance_l.fStopThread != FALSE)
         {
             target_msleep(10);
             if (i++ > 100)

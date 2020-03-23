@@ -9,8 +9,9 @@ API.
 *******************************************************************************/
 
 /*------------------------------------------------------------------------------
-Copyright (c) 2016, Bernecker+Rainer Industrie-Elektronik Ges.m.b.H. (B&R)
+Copyright (c) 2017, B&R Industrial Automation GmbH
 Copyright (c) 2013, SYSTEC electronic GmbH
+Copyright (c) 2018, Kalycito Infotech Private Limited
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -53,10 +54,25 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //------------------------------------------------------------------------------
 // const defines
 //------------------------------------------------------------------------------
+#define OPLK_MAC_ADDRESS_LENGTH     6
+#define OPLK_MAX_ETH_DEVICE_NAME    64
+#define OPLK_MAX_ETH_DEVICE_DESC    256
 
 //------------------------------------------------------------------------------
 // typedef
 //------------------------------------------------------------------------------
+
+/**
+\brief Structure identifying a network interface
+
+This structure identifies a network interface.
+*/
+typedef struct
+{
+    UINT8   aMacAddress[OPLK_MAC_ADDRESS_LENGTH];           ///< MAC address of the interface
+    char    aDeviceName[OPLK_MAX_ETH_DEVICE_NAME];          ///< Name (system-internal identifier) of the interface
+    char    aDeviceDescription[OPLK_MAX_ETH_DEVICE_DESC];   ///< Description of the interface
+} tNetIfId;
 
 typedef enum
 {
@@ -164,8 +180,8 @@ forward requested PRes frames to the application (e.g. for diagnosis).
 */
 typedef struct
 {
-    UINT16                      nodeId;         ///< Node ID of the received PRes frame
-    UINT16                      frameSize;      ///< Size of the received PRes frame
+    UINT                        nodeId;         ///< Node ID of the received PRes frame
+    size_t                      frameSize;      ///< Size of the received PRes frame
     tPlkFrame*                  pFrame;         ///< Pointer to the received PRes frame
 } tOplkApiEventReceivedPres;
 
@@ -201,7 +217,7 @@ It is used to inform the application about the received SDO command layer.
 typedef struct
 {
     tAsySdoCom*                 pAsySdoCom;     ///< Pointer to the SDO command layer
-    UINT                        dataSize;       ///< Size of the received SDO command layer
+    size_t                      dataSize;       ///< Size of the received SDO command layer
 } tOplkApiEventReceivedSdoCom;
 
 /**
@@ -213,7 +229,7 @@ It is used to inform the application about the received SDO sequence layer.
 typedef struct
 {
     tAsySdoSeq*                 pAsySdoSeq;     ///< Pointer to the SDO sequence layer
-    UINT                        dataSize;       ///< Size of the received SDO sequence layer
+    size_t                      dataSize;       ///< Size of the received SDO sequence layer
 } tOplkApiEventReceivedSdoSeq;
 
 /**
@@ -407,20 +423,22 @@ byte order!
 typedef struct
 {
     UINT                sizeOfInitParam;            ///< This field contains the size of the initialization parameter structure.
-    BOOL                fAsyncOnly;                 ///< Determines if this node is an async-only node. If TRUE the node communicates only asynchronously.
-    UINT                nodeId;                     ///< The node ID of this node.
+    UINT8               fAsyncOnly;                 ///< Determines if this node is an async-only node. If TRUE the node communicates only asynchronously.
+    UINT8               nodeId;                     ///< The node ID of this node.
+    UINT8               padding1[3];                ///< Padding to 32 bit boundary
     UINT8               aMacAddress[6];             ///< The MAC address of this node.
     UINT32              featureFlags;               ///< The POWERLINK feature flags of this node (0x1F82: NMT_FeatureFlags_U32)
     UINT32              cycleLen;                   ///< The cycle Length (0x1006: NMT_CycleLen_U32) in [us]
-    UINT                isochrTxMaxPayload;         ///< Maximum isochronous transmit payload (0x1F98.1: IsochrTxMaxPayload_U16) Const!
-    UINT                isochrRxMaxPayload;         ///< Maximum isochronous receive payload (0x1F98.2: IsochrRxMaxPayload_U16) Const!
+    UINT16              isochrTxMaxPayload;         ///< Maximum isochronous transmit payload (0x1F98.1: IsochrTxMaxPayload_U16) Const!
+    UINT16              isochrRxMaxPayload;         ///< Maximum isochronous receive payload (0x1F98.2: IsochrRxMaxPayload_U16) Const!
     UINT32              presMaxLatency;             ///< Maximum PRes latency in ns (0x1F98.3: PResMaxLatency_U32) Read-only!
-    UINT                preqActPayloadLimit;        ///< Actual PReq payload limit (0x1F98.4: PReqActPayloadLimit_U16)
-    UINT                presActPayloadLimit;        ///< Actual PRes payload limit (0x1F98.5: PResActPayloadLimit_U16)
+    UINT16              preqActPayloadLimit;        ///< Actual PReq payload limit (0x1F98.4: PReqActPayloadLimit_U16)
+    UINT16              presActPayloadLimit;        ///< Actual PRes payload limit (0x1F98.5: PResActPayloadLimit_U16)
     UINT32              asndMaxLatency;             ///< Maximum ASnd latency in ns (0x1F98.6: ASndMaxLatency_U32) Const!
-    UINT                multiplCylceCnt;            ///< Multiplexed cycle count (0x1F98.7: MultiplCycleCnt_U8)
-    UINT                asyncMtu;                   ///< Asynchronous MTU (0x1F98.8: AsyncMTU_U16)
-    UINT                prescaler;                  ///< SoC prescaler (0x1F98.9: Prescaler_U16)
+    UINT8               multiplCylceCnt;            ///< Multiplexed cycle count (0x1F98.7: MultiplCycleCnt_U8)
+    UINT8               padding2[3];                ///< Padding to 32 bit boundary
+    UINT16              asyncMtu;                   ///< Asynchronous MTU (0x1F98.8: AsyncMTU_U16)
+    UINT16              prescaler;                  ///< SoC prescaler (0x1F98.9: Prescaler_U16)
     UINT32              lossOfFrameTolerance;       ///< Loss of frame tolerance in ns (0x1C14: DLL_LossOfFrameTolerance_U32)
     UINT32              waitSocPreq;                ///< Wait time for first PReq in ns (0x1F8A.1: WaitSoCPReq_U32) Only for MN!
     UINT32              asyncSlotTimeout;           ///< Asynchronous slot timeout in ns (0x1F8A.2: AsyncSlotTimeout_U32) Only for MN!
@@ -449,10 +467,10 @@ typedef struct
                                                          In this case the stack calls the provided application callback function when synchronous data can be
                                                          exchanged. If a split stack is used (e.g. Linux user/kernel) it must be initialized with NULL. In
                                                          this case the application must use oplk_waitSyncEvent() for waiting on synchronous data. */
-    tHwParam            hwParam;                    ///< The hardware parameters of the node
+    tNetIfParameter     hwParam;                    ///< The network interface card parameters of the node
     UINT32              syncResLatency;             ///< Constant response latency for SyncRes in ns
     UINT                syncNodeId;                 ///< Specifies the synchronization point for the MN. The synchronization take place after a PRes from a CN with this node-ID (0 = SoC, 255 = SoA)
-    BOOL                fSyncOnPrcNode;             ///< If it is TRUE, Sync on PRes chained CN; FALSE: conventional CN (PReq/PRes)
+    UINT8               fSyncOnPrcNode;             ///< If it is TRUE, Sync on PRes chained CN; FALSE: conventional CN (PReq/PRes)
     tOplkApiSdoStack    sdoStackType;               ///< Specifies the SDO stack that should be used.
                                                     /**< It is used for switching between the standard SDO stack and alternative SDO stacks. The available SDO stacks are defined by the \ref tOplkApiSdoStack enumeration.
                                                          If the standard SDO stack is used it must be initialized with 0x00.*/
@@ -471,7 +489,7 @@ This structure provides information about a process image.
 typedef struct
 {
     void*          pImage;                          ///< Pointer to the process image
-    UINT           imageSize;                       ///< Size of the process image
+    size_t         imageSize;                       ///< Size of the process image
 } tOplkApiProcessImage;
 
 /**
@@ -529,6 +547,8 @@ OPLKDLLEXPORT tOplkError oplk_destroy(void);
 OPLKDLLEXPORT void oplk_exit(void);
 OPLKDLLEXPORT OPLK_DEPRECATED tOplkError oplk_init(const tOplkApiInitParam* pInitParam_p);
 OPLKDLLEXPORT OPLK_DEPRECATED tOplkError oplk_shutdown(void);
+OPLKDLLEXPORT tOplkError oplk_enumerateNetworkInterfaces(tNetIfId* pInterfaces_p,
+                                                         size_t* pNoInterfaces_p);
 OPLKDLLEXPORT tOplkError oplk_execNmtCommand(tNmtEvent NmtEvent_p);
 OPLKDLLEXPORT tOplkError oplk_linkObject(UINT objIndex_p,
                                          void* pVar_p,
@@ -540,17 +560,33 @@ OPLKDLLEXPORT tOplkError oplk_readObject(tSdoComConHdl* pSdoComConHdl_p,
                                          UINT index_p,
                                          UINT subindex_p,
                                          void* pDstData_le_p,
-                                         UINT* pSize_p,
+                                         size_t* pSize_p,
                                          tSdoType sdoType_p,
                                          void* pUserArg_p);
+OPLKDLLEXPORT tOplkError oplk_readMultipleObjects(tSdoComConHdl* pSdoComConHdl_p,
+                                                  UINT nodeId_p,
+                                                  tSdoMultiAccEntry* paSubAcc_p,
+                                                  UINT subAccCnt_p,
+                                                  tSdoType sdoType_p,
+                                                  void* pBuffer_p,
+                                                  size_t bufSize_p,
+                                                  void* pUserArg_p);
 OPLKDLLEXPORT tOplkError oplk_writeObject(tSdoComConHdl* pSdoComConHdl_p,
                                           UINT nodeId_p,
                                           UINT index_p,
                                           UINT subindex_p,
                                           const void* pSrcData_le_p,
-                                          UINT size_p,
+                                          size_t size_p,
                                           tSdoType sdoType_p,
                                           void* pUserArg_p);
+OPLKDLLEXPORT tOplkError oplk_writeMultipleObjects(tSdoComConHdl* pSdoComConHdl_p,
+                                                   UINT nodeId_p,
+                                                   tSdoMultiAccEntry* paSubAcc_p,
+                                                   UINT subAccCnt_p,
+                                                   tSdoType sdoType_p,
+                                                   void* pBuffer_p,
+                                                   size_t bufSize_p,
+                                                   void* pUserArg_p);
 OPLKDLLEXPORT tOplkError oplk_finishUserObdAccess(tObdAlConHdl* pUserObdConHdl_p);
 OPLKDLLEXPORT tOplkError oplk_enableUserObdAccess(BOOL fEnable_p);
 OPLKDLLEXPORT tOplkError oplk_freeSdoChannel(tSdoComConHdl sdoComConHdl_p);
@@ -559,11 +595,11 @@ OPLKDLLEXPORT tOplkError oplk_abortSdo(tSdoComConHdl sdoComConHdl_p,
 OPLKDLLEXPORT tOplkError oplk_readLocalObject(UINT index_p,
                                               UINT subindex_p,
                                               void* pDstData_p,
-                                              UINT* pSize_p);
+                                              size_t* pSize_p);
 OPLKDLLEXPORT tOplkError oplk_writeLocalObject(UINT index_p,
                                                UINT subindex_p,
                                                const void* pSrcData_p,
-                                               UINT size_p);
+                                               size_t size_p);
 OPLKDLLEXPORT tOplkError oplk_sendAsndFrame(UINT8 dstNodeId_p,
                                             const tAsndFrame* pAsndFrame_p,
                                             size_t asndSize_p);
@@ -594,12 +630,12 @@ OPLKDLLEXPORT tOplkError oplk_exchangeAppPdoIn(void);
 OPLKDLLEXPORT tOplkError oplk_exchangeAppPdoOut(void);
 
 // Process image API functions
-OPLKDLLEXPORT tOplkError oplk_allocProcessImage(UINT sizeProcessImageIn_p,
-                                                UINT sizeProcessImageOut_p);
+OPLKDLLEXPORT tOplkError oplk_allocProcessImage(size_t sizeProcessImageIn_p,
+                                                size_t sizeProcessImageOut_p);
 OPLKDLLEXPORT tOplkError oplk_freeProcessImage(void);
 OPLKDLLEXPORT tOplkError oplk_linkProcessImageObject(UINT objIndex_p,
                                                      UINT firstSubindex_p,
-                                                     UINT offsetPI_p,
+                                                     size_t offsetPI_p,
                                                      BOOL fOutputPI_p,
                                                      tObdSize entrySize_p,
                                                      UINT* pVarEntries_p);

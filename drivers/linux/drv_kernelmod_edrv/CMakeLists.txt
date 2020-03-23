@@ -3,7 +3,7 @@
 # CMake file for openPOWERLINK kernel stack (Linux kernel module)
 #
 # Copyright (c) 2013, SYSTEC electronik GmbH
-# Copyright (c) 2016, Bernecker+Rainer Industrie-Elektronik Ges.m.b.H. (B&R)
+# Copyright (c) 2016, B&R Industrial Automation GmbH
 # Copyright (c) 2016, Kalycito Infotech Private Limited
 # Copyright (c) 2016, Romain Naour (Open Wide)
 # All rights reserved.
@@ -290,7 +290,7 @@ ENDIF()
 IF(CMAKE_SYSTEM_PROCESSOR MATCHES "^(i.86|x86(_64)?)$")
     SET(MODULE_SOURCE_FILES ${MODULE_SOURCE_FILES} ${COMMON_SOURCE_DIR}/ami/amix86.c)
 ELSEIF(CMAKE_SYSTEM_PROCESSOR MATCHES arm*)
-    SET(MODULE_SOURCE_FILES ${MODULE_SOURCE_FILES} ${COMMON_SOURCE_DIR}/ami/amile.c)
+    SET(MODULE_SOURCE_FILES ${MODULE_SOURCE_FILES} ${COMMON_SOURCE_DIR}/ami/ami.c)
 ELSE()
     MESSAGE(FATAL_ERROR
             "ami: CMAKE_SYSTEM_PROCESSOR is set to ${CMAKE_SYSTEM_PROCESSOR}. Valid targets are (x86, x86_64, arm, armv7l, i686).")

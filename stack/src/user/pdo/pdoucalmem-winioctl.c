@@ -18,8 +18,8 @@ module using the offset acquired from the kernel driver.
 *******************************************************************************/
 
 /*------------------------------------------------------------------------------
-Copyright (c) 2015, Kalycito Infotech Private Limited
-Copyright (c) 2016, Bernecker+Rainer Industrie-Elektronik Ges.m.b.H. (B&R)
+Copyright (c) 2017, Kalycito Infotech Private Limited
+Copyright (c) 2017, B&R Industrial Automation GmbH
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -148,13 +148,13 @@ The function allocates shared memory for the user needed to transfer the PDOs.
 \ingroup module_pdokcal
 */
 //------------------------------------------------------------------------------
-tOplkError pdoucal_allocateMem(size_t memSize_p, UINT8** ppPdoMem_p)
+tOplkError pdoucal_allocateMem(size_t memSize_p, void** ppPdoMem_p)
 {
     ULONG       bytesReturned;
     tPdoMem     inPdoMem;
     tPdoMem     outPdoMem;
     tOplkError  ret;
-    UINT8*      pPdoMem = NULL;
+    void*       pPdoMem = NULL;
     BOOL        fIoctlRet;
 
     // Check parameter validity
@@ -163,7 +163,7 @@ tOplkError pdoucal_allocateMem(size_t memSize_p, UINT8** ppPdoMem_p)
     if (hFileHandle_l == NULL)
         return kErrorNoResource;
 
-    inPdoMem.memSize = (UINT)memSize_p;
+    inPdoMem.memSize = memSize_p;
 
     fIoctlRet = DeviceIoControl(hFileHandle_l,
                                 PLK_CMD_PDO_GET_MEM,
@@ -206,7 +206,7 @@ transferring the PDOs.
 \ingroup module_pdokcal
 */
 //------------------------------------------------------------------------------
-tOplkError pdoucal_freeMem(UINT8* pMem_p, size_t memSize_p)
+tOplkError pdoucal_freeMem(void* pMem_p, size_t memSize_p)
 {
     UNUSED_PARAMETER(pMem_p);
     UNUSED_PARAMETER(memSize_p);

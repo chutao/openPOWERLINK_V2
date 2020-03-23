@@ -11,7 +11,7 @@ DLL kernel module.
 
 /*------------------------------------------------------------------------------
 Copyright (c) 2013, SYSTEC electronic GmbH
-Copyright (c) 2016, Bernecker+Rainer Industrie-Elektronik Ges.m.b.H. (B&R)
+Copyright (c) 2016, B&R Industrial Automation GmbH
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -80,8 +80,9 @@ tOplkError dllkframe_updateFrameIdentRes(tEdrvTxBuffer* pTxBuffer_p, tNmtState n
 tOplkError dllkframe_updateFrameStatusRes(tEdrvTxBuffer* pTxBuffer_p, tNmtState NmtState_p);
 tOplkError dllkframe_updateFrameAsyncRes(tNmtState nmtState_p);
 tOplkError dllkframe_updateFramePres(tEdrvTxBuffer* pTxBuffer_p, tNmtState nmtState_p);
-tOplkError dllkframe_checkFrame(tPlkFrame* pFrame_p, UINT frameSize_p);
-tOplkError dllkframe_createTxFrame(UINT* pHandle_p, UINT* pFrameSize_p,
+tOplkError dllkframe_checkFrame(tPlkFrame* pFrame_p, size_t frameSize_p);
+tOplkError dllkframe_createTxFrame(UINT* pHandle_p,
+                                   size_t* pFrameSize_p,
                                    tMsgType msgType_p,
                                    tDllAsndServiceId serviceId_p);
 tOplkError dllkframe_deleteTxFrame(UINT handle_p);
@@ -98,7 +99,7 @@ tOplkError dllkframe_mnSendSoa(tNmtState nmtState_p,
 tOplkError dllkframe_updateFrameSoa(tEdrvTxBuffer* pTxBuffer_p,
                                     tNmtState NmtState_p,
                                     BOOL fEnableInvitation_p,
-                                    BYTE curReq_p)
+                                    UINT8 curReq_p)
            SECTION_DLLK_FRAME_UPDATE_SOA;
 tOplkError dllkframe_asyncFrameNotReceived(tDllReqServiceId reqServiceId_p,
                                            UINT nodeId_p)
@@ -109,7 +110,7 @@ tOplkError dllkframe_cbMnTimerCycle(const tTimerEventArg* pEventArg_p);
 #endif
 
 /* PRes Chaining functions */
-#if CONFIG_DLL_PRES_CHAINING_CN == TRUE
+#if (CONFIG_DLL_PRES_CHAINING_CN != FALSE)
 tOplkError dllkframe_presChainingEnable(void);
 tOplkError dllkframe_presChainingDisable(void);
 #endif

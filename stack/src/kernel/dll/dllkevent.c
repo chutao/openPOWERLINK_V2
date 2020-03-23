@@ -10,7 +10,8 @@ This file contains the event handling functions of the kernel DLL module.
 *******************************************************************************/
 
 /*------------------------------------------------------------------------------
-Copyright (c) 2016, Bernecker+Rainer Industrie-Elektronik Ges.m.b.H. (B&R)
+Copyright (c) 2017, Kalycito Infotech Private Limited
+Copyright (c) 2018, B&R Industrial Automation GmbH
 Copyright (c) 2015, SYSTEC electronic GmbH
 All rights reserved.
 
@@ -88,6 +89,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //------------------------------------------------------------------------------
 // const defines
 //------------------------------------------------------------------------------
+#if (defined(CONFIG_INCLUDE_NMT_MN) && defined(CONFIG_INCLUDE_SOC_TIME_FORWARD))
+#define DLLK_SEC_TO_NSEC_FACTOR 1000000000U
+#endif
 
 //------------------------------------------------------------------------------
 // local types
@@ -102,7 +106,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //------------------------------------------------------------------------------
 static tOplkError controlTimeSync(BOOL fEnable_p);
 
-static tOplkError processNmtStateChange(tNmtState newNmtState_p, tNmtState OldNmtState_p, tNmtEvent nmtEvent_p);
+static tOplkError processNmtStateChange(tNmtState newNmtState_p, tNmtState oldNmtState_p, tNmtEvent nmtEvent_p);
 static tOplkError processNmtEvent(const tEvent* pEvent_p);
 static tOplkError processCycleFinish(tNmtState nmtState_p) SECTION_DLLK_PROCESS_CYCFIN;
 static tOplkError processSync(tNmtState nmtState_p) SECTION_DLLK_PROCESS_SYNC;
@@ -111,14 +115,17 @@ static tOplkError processSyncCn(tNmtState nmtState_p, BOOL fReadyFlag_p) SECTION
 static tOplkError processSyncMn(tNmtState nmtState_p, BOOL fReadyFlag_p) SECTION_DLLK_PROCESS_SYNC;
 static tOplkError processStartReducedCycle(void);
 #endif
-#if (CONFIG_DLL_PRES_READY_AFTER_SOA != FALSE)
-static tOplkError processPresReady(tNmtState nmtState_p);
-#endif
 static tOplkError processFillTx(tDllAsyncReqPriority asyncReqPriority_p, tNmtState nmtState_p);
 
 #if (defined(CONFIG_INCLUDE_NMT_MN) && defined(CONFIG_INCLUDE_PRES_FORWARD))
 // Request forwarding of Pres frames (for conformance test)
 static tOplkError requestPresForward(UINT node_p);
+#endif
+
+#if (defined(CONFIG_INCLUDE_NMT_MN) && defined(CONFIG_INCLUDE_SOC_TIME_FORWARD))
+static void addNetTime(const tNetTime* pInputNetTime_p,
+                       const tNetTime cycleLength_p,
+                       tNetTime* pResultantNetTime_p);
 #endif
 
 //============================================================================//
@@ -189,13 +196,6 @@ tOplkError dllk_process(const tEvent* pEvent_p)
 
 #endif
 
-#if (CONFIG_DLL_PRES_READY_AFTER_SOA != FALSE)
-        case kEventTypeDllkPresReady:
-            ret = processPresReady(dllkInstance_g.nmtState);
-            break;
-#endif
-
-
         default:
             TRACE("%s(): unhandled event type!\n", __func__);
 #if !defined(NDEBUG)
@@ -203,8 +203,8 @@ tOplkError dllk_process(const tEvent* pEvent_p)
             for (;;);
 #else
             ret = kErrorInvalidEvent;
-#endif
             break;
+#endif
     }
 
     return ret;
@@ -249,7 +249,7 @@ static tOplkError controlTimeSync(BOOL fEnable_p)
     }
 #endif
 
-#if (CONFIG_TIMER_USE_HIGHRES == TRUE)
+#if (CONFIG_TIMER_USE_HIGHRES != FALSE)
     if (ret == kErrorOk)
     {
         // Activate/deactivate external synchronization interrupt
@@ -288,6 +288,9 @@ static tOplkError processNmtStateChange(tNmtState newNmtState_p,
         case kNmtGsOff:
         case kNmtGsInitialising:
             dllkInstance_g.socTime.relTime = 0;
+#if (defined(CONFIG_INCLUDE_NMT_MN) && defined(CONFIG_INCLUDE_SOC_TIME_FORWARD))
+            dllkInstance_g.fIncrementNetTime = FALSE;  // Reset increment net time flag
+#endif
             // set EC flag in Flag 1, so the MN can detect a reboot and
             // will initialize the Error Signaling.
             dllkInstance_g.flag1 = PLK_FRAME_FLAG1_EC;
@@ -685,7 +688,7 @@ static tOplkError processFillTx(tDllAsyncReqPriority asyncReqPriority_p, tNmtSta
     tOplkError          ret = kErrorOk;
     tPlkFrame *         pTxFrame;
     tEdrvTxBuffer*      pTxBuffer;
-    UINT                frameSize;
+    size_t              frameSize;
     UINT                frameCount;
     UINT                nextTxBufferOffset;
     tDllkTxBufState*    pTxBufferState = NULL;
@@ -729,7 +732,7 @@ static tOplkError processFillTx(tDllAsyncReqPriority asyncReqPriority_p, tNmtSta
             if (ret == kErrorOk)
             {
                 pTxFrame = (tPlkFrame*)pTxBuffer->pBuffer;
-                ret = dllkframe_checkFrame(pTxFrame, frameSize);
+                ret = dllkframe_checkFrame(pTxFrame, (size_t)frameSize);
                 if (ret != kErrorOk)
                     goto Exit;
 
@@ -738,14 +741,14 @@ static tOplkError processFillTx(tDllAsyncReqPriority asyncReqPriority_p, tNmtSta
                     // Zero the frame buffer until minimum frame size to avoid
                     // relicts in padding area. The async Tx buffers are always
                     // allocated with maximum size, so we can zero safely.
-                    OPLK_MEMSET(((UINT8*)pTxFrame) + frameSize,
+                    OPLK_MEMSET((UINT8*)pTxFrame + frameSize,
                                 0,
                                 C_DLL_MIN_ETH_FRAME - frameSize);
 
                     frameSize = C_DLL_MIN_ETH_FRAME;
                 }
 
-                pTxBuffer->txFrameSize = frameSize;    // set buffer valid
+                pTxBuffer->txFrameSize = (UINT)frameSize;    // set buffer valid
                 *pTxBufferState = kDllkTxBufReady;
 
 #if (CONFIG_EDRV_AUTO_RESPONSE != FALSE)
@@ -987,7 +990,7 @@ static tOplkError processSyncCn(tNmtState nmtState_p, BOOL fReadyFlag_p)
             fReadyFlag_p = FALSE;
 
         frameInfo.frame.pBuffer = pTxFrame;
-        frameInfo.frameSize = pTxBuffer->txFrameSize;
+        frameInfo.frameSize = (UINT)pTxBuffer->txFrameSize;
         ret = dllkframe_processTpdo(&frameInfo, fReadyFlag_p);
         if (ret != kErrorOk)
             return ret;
@@ -1026,6 +1029,10 @@ static tOplkError processSyncMn(tNmtState nmtState_p, BOOL fReadyFlag_p)
     UINT            index = 0;
     UINT32          nextTimeOffsetNs = 0;
     UINT            nextTxBufferOffset = dllkInstance_g.curTxBufferOffsetCycle ^ 1;
+#if defined(CONFIG_INCLUDE_SOC_TIME_FORWARD)
+    tNetTime*       pNetTime = &dllkInstance_g.socTime.netTime;   // Pointer to net time value
+    BOOL            fNewData = FALSE;                             // Flag to indicate if new net time data is received from user layer
+#endif
 
     pTxBuffer = &dllkInstance_g.pTxBuffer[DLLK_TXFRAME_SOC + nextTxBufferOffset];
     pTxBuffer->timeOffsetNs = nextTimeOffsetNs;
@@ -1037,6 +1044,25 @@ static tOplkError processSyncMn(tNmtState nmtState_p, BOOL fReadyFlag_p)
     ret = timesynck_setSocTime(&dllkInstance_g.socTime);
     if (ret != kErrorOk)
         return ret;
+
+    // Get the net time information from userToKernel shared buffer
+    ret = timesynck_getNetTime(pNetTime, &fNewData);
+    if (ret != kErrorOk)
+        return ret;
+
+    if (fNewData)
+    {
+        // Set the flag to increment the net time value
+        dllkInstance_g.fIncrementNetTime = TRUE;
+    }
+
+    // Increment net time if dllkInstance_g.fIncrementNetTime is TRUE
+    if (dllkInstance_g.fIncrementNetTime)
+        addNetTime(pNetTime, dllkInstance_g.cycleLength, pNetTime);
+
+    // Set SoC net time
+    ami_setUint32Le(&pTxFrame->data.soc.netTimeLe.nsec, dllkInstance_g.socTime.netTime.nsec);
+    ami_setUint32Le(&pTxFrame->data.soc.netTimeLe.sec, dllkInstance_g.socTime.netTime.sec);
 #endif
 
     // Set SoC relative time
@@ -1069,56 +1095,6 @@ static tOplkError processSyncMn(tNmtState nmtState_p, BOOL fReadyFlag_p)
     index++;
 
     ret = edrvcyclic_setNextTxBufferList(dllkInstance_g.ppTxBufferList, index);
-
-    return ret;
-}
-#endif
-
-#if (CONFIG_DLL_PRES_READY_AFTER_SOA != FALSE)
-//------------------------------------------------------------------------------
-/**
-\brief  Process PRes ready event
-
-The function processes the PRes Ready event.
-
-\param[in]      nmtState_p          NMT state of local node.
-
-\return The function returns a tOplkError error code.
-*/
-//------------------------------------------------------------------------------
-static tOplkError processPresReady(tNmtState nmtState_p)
-{
-    tOplkError  ret = kErrorOk;
-    tPlkFrame*  pTxFrame;
-
-    // post PRes to transmit FIFO
-    if (nmtState_p != kNmtCsBasicEthernet)
-    {
-        // Does PRes exist?
-        if (dllkInstance_g.pTxBuffer[DLLK_TXFRAME_PRES +
-                                     dllkInstance_g.curTxBufferOffsetCycle].pBuffer != NULL)
-        {   // PRes does exist
-            pTxFrame = (tPlkFrame*)dllkInstance_g.pTxBuffer[DLLK_TXFRAME_PRES +
-                                                            dllkInstance_g.curTxBufferOffsetCycle].pBuffer;
-            // update frame (NMT state, RD, RS, PR, MS, EN flags)
-            if (nmtState_p < kNmtCsPreOperational2)
-            {   // NMT state is not PreOp2, ReadyToOp or Op
-                // fake NMT state PreOp2, because PRes will be sent only in PreOp2 or greater
-                nmtState_p = kNmtCsPreOperational2;
-            }
-            ami_setUint8Le(&pTxFrame->data.pres.nmtStatus, (UINT8)nmtState_p);
-            ami_setUint8Le(&pTxFrame->data.pres.flag2, dllkInstance_g.flag2);
-            if (nmtState_p != kNmtCsOperational)
-            {   // mark PDO as invalid in all NMT state but Op
-                // $$$ reset only RD flag; set other flags appropriately
-                ami_setUint8Le(&pTxFrame->data.pres.flag1, 0);
-            }
-            // $$$ make function that updates Pres, StatusRes
-            // mark PRes frame as ready for transmission
-            //ret = edrv_setTxBufferReady(&dllkInstance_g.pTxBuffer[DLLK_TXFRAME_PRES +
-            //                                               dllkInstance_g.curTxBufferOffsetCycle]);
-        }
-    }
 
     return ret;
 }
@@ -1211,6 +1187,36 @@ static tOplkError requestPresForward(UINT node_p)
 }
 #endif
 
+#endif
+
+#if (defined(CONFIG_INCLUDE_SOC_TIME_FORWARD) && defined(CONFIG_INCLUDE_NMT_MN))
+//------------------------------------------------------------------------------
+/**
+\brief  Add net time value
+
+This function increments the net time value with respect to cycle length and
+returns the updated net time value.
+
+\param[in]     pInputNetTime_p      Input pointer to net time structure.
+\param[in]     cycleLength_p        Cycle length in tNetTime format.
+\param[out]    pResultantNetTime_p  Resultant pointer to net time structure.
+
+*/
+//------------------------------------------------------------------------------
+static void addNetTime(const tNetTime* pInputNetTime_p,
+                       const tNetTime cycleLength_p,
+                       tNetTime* pResultantNetTime_p)
+{
+    UINT32 netTimeNsec = 0;
+
+    netTimeNsec = pInputNetTime_p->nsec + cycleLength_p.nsec;
+
+    // Update the seconds value
+    pResultantNetTime_p->sec = pInputNetTime_p->sec + cycleLength_p.sec +
+                               (netTimeNsec / DLLK_SEC_TO_NSEC_FACTOR);
+    // Update the nanoseconds value
+    pResultantNetTime_p->nsec = netTimeNsec % DLLK_SEC_TO_NSEC_FACTOR;
+}
 #endif
 
 /// \}

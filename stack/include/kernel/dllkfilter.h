@@ -11,7 +11,7 @@ can only be used for MACs which have a frame filter.
 
 /*------------------------------------------------------------------------------
 Copyright (c) 2013, SYSTEC electronic GmbH
-Copyright (c) 2016, Bernecker+Rainer Industrie-Elektronik Ges.m.b.H. (B&R)
+Copyright (c) 2016, B&R Industrial Automation GmbH
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -92,7 +92,7 @@ extern "C"
 
 void dllkfilter_setupFilters(void);
 void dllkfilter_setupPresFilter(tEdrvFilter* pFilter_p, BOOL fEnable_p);
-void dllkfilter_setupPreqFilter(tEdrvFilter* pFilter_p, UINT nodeId_p,
+void dllkfilter_setupPreqFilter(tEdrvFilter* pFilter_p, UINT8 nodeId_p,
                                 tEdrvTxBuffer* pBuffer_p,
                                 const UINT8* pMacAdrs_p);
 

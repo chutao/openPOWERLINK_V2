@@ -2,9 +2,9 @@
 #
 # File lists for openPOWERLINK stack sources
 #
-# Copyright (c) 2016, Bernecker+Rainer Industrie-Elektronik Ges.m.b.H. (B&R)
+# Copyright (c) 2017, B&R Industrial Automation GmbH
 # Copyright (c) 2016, Franz Profelt (franz.profelt@gmail.com)
-# Copyright (c) 2016, Kalycito Infotech Private Limited
+# Copyright (c) 2018, Kalycito Infotech Private Limited
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -101,6 +101,8 @@ SET(USER_SOURCES
     ${USER_SOURCE_DIR}/sdo/sdocom-dummy.c
     ${USER_SOURCE_DIR}/sdo/sdocom.c
     ${USER_SOURCE_DIR}/sdo/sdocom-std.c
+    ${USER_SOURCE_DIR}/sdo/sdocomsrv.c
+    ${USER_SOURCE_DIR}/sdo/sdocomclt.c
     ${USER_SOURCE_DIR}/sdo/sdoseq.c
     ${USER_SOURCE_DIR}/sdo/sdoasnd.c
     ${USER_SOURCE_DIR}/sdo/sdoudp.c
@@ -143,8 +145,8 @@ SET(CTRL_UCAL_LINUXIOCTL_SOURCES
     ${USER_SOURCE_DIR}/ctrl/ctrlucal-ioctl.c
     )
 
-SET(CTRL_UCAL_LINUXPCIE_SOURCES
-    ${USER_SOURCE_DIR}/ctrl/ctrlucal-pcie.c
+SET(CTRL_UCAL_LINUXDPSHM_SOURCES
+    ${USER_SOURCE_DIR}/ctrl/ctrlucal-linuxdpshm.c
     )
 
 SET(CTRL_UCAL_POSIXMEM_SOURCES
@@ -222,8 +224,8 @@ SET(EVENT_UCAL_LINUXIOCTL_SOURCES
     ${USER_SOURCE_DIR}/event/eventucal-linuxioctl.c
     )
 
-SET(EVENT_UCAL_LINUXPCIE_SOURCES
-    ${USER_SOURCE_DIR}/event/eventucal-linuxpcie.c
+SET(EVENT_UCAL_LINUXDPSHM_SOURCES
+    ${USER_SOURCE_DIR}/event/eventucal-linuxdpshm.c
     ${USER_SOURCE_DIR}/event/eventucalintf-circbuf.c
     )
 
@@ -278,9 +280,9 @@ SET(PDO_UCAL_LINUXMMAPIOCTL_SOURCES
     ${USER_SOURCE_DIR}/pdo/pdoucalmem-linuxmmap.c
     )
 
-SET(PDO_UCAL_LINUXPCIE_SOURCES
-    ${USER_SOURCE_DIR}/timesync/timesyncucal-ioctl.c
-    ${USER_SOURCE_DIR}/pdo/pdoucalmem-linuxpcie.c
+SET(PDO_UCAL_LINUXDPSHM_SOURCES
+    ${USER_SOURCE_DIR}/timesync/timesyncucal-linuxdpshm.c
+    ${USER_SOURCE_DIR}/pdo/pdoucalmem-linuxdpshm.c
     )
 
 SET(PDO_UCAL_HOSTIF_SOURCES
@@ -439,7 +441,7 @@ SET(PDO_KCAL_POSIXMEM_SOURCES
 
 SET(PDO_KCAL_LINUXKERNEL_SOURCES
     ${KERNEL_SOURCE_DIR}/pdo/pdokcalmem-linuxkernel.c
-    ${KERNEL_SOURCE_DIR}/timesync/timesynckcal-linuxkernel.c
+    ${KERNEL_SOURCE_DIR}/timesync/timesynckcal-linuxdpshm.c
     )
 
 SET(PDO_KCAL_LINUXKERNEL_SOURCES
@@ -467,6 +469,13 @@ SET(HARDWARE_DRIVER_LINUXUSER_SOURCES
     ${EDRV_SOURCE_DIR}/edrv-pcap_linux.c
     )
 
+SET(HARDWARE_DRIVER_LINUXUSERRAWSOCKET_SOURCES
+    ${KERNEL_SOURCE_DIR}/veth/veth-linuxuser.c
+    ${KERNEL_SOURCE_DIR}/timer/hrestimer-posix.c
+    ${EDRV_SOURCE_DIR}/edrvcyclic.c
+    ${EDRV_SOURCE_DIR}/edrv-rawsock_linux.c
+    )
+
 SET(HARDWARE_DRIVER_WINDOWS_SOURCES
     ${EDRV_SOURCE_DIR}/edrvcyclic.c
     ${EDRV_SOURCE_DIR}/edrv-pcap_win.c
@@ -486,8 +495,8 @@ SET(HARDWARE_DRIVER_WINNDISIM_SOURCES
      ${EDRV_SOURCE_DIR}/edrv-ndisintermediate.c
      )
 
-SET(HARDWARE_DRIVER_LINUXPCIE_SOURCES
-     ${KERNEL_SOURCE_DIR}/veth/veth-linuxpcie.c
+SET(HARDWARE_DRIVER_LINUXDPSHM_SOURCES
+     ${KERNEL_SOURCE_DIR}/veth/veth-linuxdpshm.c
      )
 
 SET(HARDWARE_DRIVER_OPENMAC_SOURCES
@@ -592,8 +601,8 @@ SET(MEMMAP_WINIOCTL_SOURCES
     ${COMMON_SOURCE_DIR}/memmap/memmap-winioctl.c
     )
 
-SET(MEMMAP_LINUXPCIE_SOURCES
-    ${COMMON_SOURCE_DIR}/memmap/memmap-linuxpcie.c
+SET(MEMMAP_LINUXDPSHM_SOURCES
+    ${COMMON_SOURCE_DIR}/memmap/memmap-linuxdpshm.c
     )
 
 SET(MEMMAP_NULL_SOURCES
@@ -611,16 +620,28 @@ SET(MEMMAP_DUALPROCSHM_SOURCES
 SET(TARGET_WINDOWS_SOURCES
     ${ARCH_SOURCE_DIR}/windows/target-windows.c
     ${ARCH_SOURCE_DIR}/windows/target-mutex.c
+    ${ARCH_SOURCE_DIR}/windows/netif-windows.c
     )
 
 SET(TARGET_WINDOWS_DUAL_SOURCES
     ${ARCH_SOURCE_DIR}/windows/lock-dualprocnoos.c
     )
 
-SET(TARGET_LINUX_SOURCES
-    ${ARCH_SOURCE_DIR}/linux/target-linux.c
-    ${ARCH_SOURCE_DIR}/linux/target-mutex.c
-    )
+IF (CFG_COMPILE_LIB_MNAPP_ZYNQINTF OR CFG_COMPILE_LIB_CNAPP_ZYNQINTF OR
+    CFG_COMPILE_LIB_MNAPP_PCIEINTF)
+    SET(TARGET_LINUX_SOURCES
+        ${ARCH_SOURCE_DIR}/linux/target-linux.c
+        ${ARCH_SOURCE_DIR}/linux/target-mutex.c
+        ${ARCH_SOURCE_DIR}/linux/netif-linux.c
+        ${ARCH_SOURCE_DIR}/linux/lock-linuxdualproc.c
+        )
+ELSE ()
+    SET(TARGET_LINUX_SOURCES
+        ${ARCH_SOURCE_DIR}/linux/target-linux.c
+        ${ARCH_SOURCE_DIR}/linux/target-mutex.c
+        ${ARCH_SOURCE_DIR}/linux/netif-linux.c
+        )
+ENDIF ()
 
 SET(TARGET_MICROBLAZE_SOURCES
     ${ARCH_SOURCE_DIR}/xilinx-microblaze/systemtimer.c
@@ -664,7 +685,7 @@ SET(ARCH_X86_SOURCES
     )
 
 SET(ARCH_LE_SOURCES
-    ${COMMON_SOURCE_DIR}/ami/amile.c
+    ${COMMON_SOURCE_DIR}/ami/ami.c
     )
 
 ################################################################################

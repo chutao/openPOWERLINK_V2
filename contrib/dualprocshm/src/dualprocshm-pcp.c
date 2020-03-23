@@ -12,7 +12,7 @@ PCIe cards.
 
 /*------------------------------------------------------------------------------
 Copyright (c) 2015, Kalycito Infotech Private Limited
-Copyright (c) 2016, Bernecker+Rainer Industrie-Elektronik Ges.m.b.H. (B&R)
+Copyright (c) 2016, B&R Industrial Automation GmbH
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -281,90 +281,6 @@ void dualprocshm_targetWriteData(void* pBase_p,
     DUALPROCSHM_MEMCPY(pBase_p, pData_p, size_p);
 
     DUALPROCSHM_FLUSH_DCACHE_RANGE((UINT32)pBase_p, size_p);
-}
-
-//------------------------------------------------------------------------------
-/**
-\brief  Target specific memory lock routine(acquire)
-
-This routine implements a target specific locking mechanism using the shared
-memory between two processors/processes. The caller needs to pass the base
-address and processor instance of the calling processor.
-
-The locking is achieved using Peterson's algorithm
-\ref https://en.wikipedia.org/wiki/Peterson's_algorithm
-
-\param[in,out]  pBase_p             Base address of the lock memory
-\param[in]      procInstance_p      Processor instance of the calling processor
-
-\ingroup module_dualprocshm
- */
-//------------------------------------------------------------------------------
-void dualprocshm_targetAcquireLock(tDualprocLock* pBase_p,
-                                   tDualProcInstance procInstance_p)
-{
-    tDualprocLock*      pLock = pBase_p;
-    tDualProcInstance   otherProcInstance;
-
-    if (pLock == NULL)
-        return;
-
-    switch (procInstance_p)
-    {
-        case kDualProcFirst:
-            otherProcInstance = kDualProcSecond;
-            break;
-
-        case kDualProcSecond:
-            otherProcInstance = kDualProcFirst;
-            break;
-
-        default:
-            TRACE("Invalid processor instance\n");
-            return;
-    }
-
-    DUALPROCSHM_INVALIDATE_DCACHE_RANGE(pLock, sizeof(tDualprocLock));
-
-    DPSHM_WRITE8(&pLock->afFlag[procInstance_p], 1);
-    DUALPROCSHM_FLUSH_DCACHE_RANGE(&pLock->afFlag[procInstance_p],
-                                   sizeof(pLock->afFlag[procInstance_p]));
-
-    DPSHM_WRITE8(&pLock->turn, otherProcInstance);
-    DUALPROCSHM_FLUSH_DCACHE_RANGE(&pLock->turn, sizeof(pLock->turn));
-
-    DPSHM_DMB();
-
-    do
-    {
-        DUALPROCSHM_INVALIDATE_DCACHE_RANGE(pLock, sizeof(tDualprocLock));
-    } while (DPSHM_READ8(&pLock->afFlag[otherProcInstance]) &&
-             (DPSHM_READ8(&pLock->turn) == otherProcInstance));
-}
-
-//------------------------------------------------------------------------------
-/**
-\brief  Target specific memory unlock routine (release)
-
-This routine is used to release a lock acquired at a specified address.
-
-\param[in,out]  pBase_p             Base address of the lock memory
-\param[in]      procInstance_p      Processor instance of the calling processor
-
-\ingroup module_dualprocshm
- */
-//------------------------------------------------------------------------------
-void dualprocshm_targetReleaseLock(tDualprocLock* pBase_p,
-                                   tDualProcInstance procInstance_p)
-{
-    tDualprocLock*  pLock = pBase_p;
-
-    if (pLock == NULL)
-        return;
-
-    DPSHM_WRITE8(&pLock->afFlag[procInstance_p], 0);
-    DUALPROCSHM_FLUSH_DCACHE_RANGE(&pLock->afFlag[procInstance_p],
-                                   sizeof(pLock->afFlag[procInstance_p]));
 }
 
 //------------------------------------------------------------------------------

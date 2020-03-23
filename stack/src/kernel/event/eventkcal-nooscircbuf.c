@@ -14,7 +14,7 @@ event queue and direct calls for the kernel-internal queue.
 *******************************************************************************/
 
 /*------------------------------------------------------------------------------
-Copyright (c) 2016, Bernecker+Rainer Industrie-Elektronik Ges.m.b.H. (B&R)
+Copyright (c) 2016, B&R Industrial Automation GmbH
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -152,7 +152,7 @@ functions of the queue implementations for each used queue.
 //------------------------------------------------------------------------------
 tOplkError eventkcal_exit(void)
 {
-    if (instance_l.fInitialized == TRUE)
+    if (instance_l.fInitialized != FALSE)
     {
         eventkcal_exitQueueCircbuf(kEventQueueKInt);
         eventkcal_exitQueueCircbuf(kEventQueueK2U);

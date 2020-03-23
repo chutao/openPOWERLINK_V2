@@ -15,8 +15,8 @@ to the openPOWERLINK kernel layer running on an external PCIe card.
 *******************************************************************************/
 
 /*------------------------------------------------------------------------------
-Copyright (c) 2015, Kalycito Infotech Private Limited
-Copyright (c) 2016, Bernecker+Rainer Industrie-Elektronik Ges.m.b.H. (B&R)
+Copyright (c) 2017, Kalycito Infotech Private Limited
+Copyright (c) 2016, B&R Industrial Automation GmbH
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -568,9 +568,9 @@ the provided offset and returns the address back.
 \ingroup module_ctrlucal
 */
 //------------------------------------------------------------------------------
-tOplkError ctrlucal_getMappedMem(UINT32 kernelOffs_p,
-                                 UINT32 size_p,
-                                 UINT8** ppUserMem_p)
+tOplkError ctrlucal_getMappedMem(size_t kernelOffs_p,
+                                 size_t size_p,
+                                 void** ppUserMem_p)
 {
     tMemStruc   inMemStruc;
     tMemStruc*  pOutMemStruc = &sharedMemStruc_l;

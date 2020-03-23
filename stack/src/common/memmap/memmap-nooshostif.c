@@ -12,7 +12,7 @@ and host interface IP-Core.
 *******************************************************************************/
 
 /*------------------------------------------------------------------------------
-Copyright (c) 2016, Bernecker+Rainer Industrie-Elektronik Ges.m.b.H. (B&R)
+Copyright (c) 2017, B&R Industrial Automation GmbH
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -148,11 +148,11 @@ The function maps a kernel buffer address.
 \ingroup module_lib_memmap
 */
 //------------------------------------------------------------------------------
-void* memmap_mapKernelBuffer(const void* pKernelBuffer_p, UINT bufferSize_p)
+void* memmap_mapKernelBuffer(const void* pKernelBuffer_p, size_t bufferSize_p)
 {
     tHostifReturn       ret;
     tHostifInstance*    pHif = memMapInstance_l.pHifInstance;
-    UINT8*              pBuffer;
+    void*               pBuffer;
 
     // Check parameter validity
     ASSERT(pKernelBuffer_p != NULL);
@@ -166,7 +166,7 @@ void* memmap_mapKernelBuffer(const void* pKernelBuffer_p, UINT bufferSize_p)
         pBuffer = NULL;
     }
 
-    return (void*)pBuffer;
+    return pBuffer;
 }
 
 //------------------------------------------------------------------------------
@@ -188,7 +188,7 @@ void memmap_unmapKernelBuffer(const void* pBuffer_p)
     // Check parameter validity
     ASSERT(pBuffer_p != NULL);
 
-    ret = hostif_dynBufFree(pHif, (const UINT8*)pBuffer_p);
+    ret = hostif_dynBufFree(pHif, pBuffer_p);
 
     if (ret != kHostifSuccessful)
     {

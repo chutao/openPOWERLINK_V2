@@ -10,7 +10,8 @@ This file contains the configuration options for the openPOWERLINK kernel module
 
 /*------------------------------------------------------------------------------
 Copyright (c) 2012, SYSTEC electronik GmbH
-Copyright (c) 2014, Bernecker+Rainer Industrie-Elektronik Ges.m.b.H. (B&R)
+Copyright (c) 2018, B&R Industrial Automation GmbH
+Copyright (c) 2018, Kalycito Infotech Private Limited.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -61,24 +62,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define CONFIG_INCLUDE_VETH
 #define CONFIG_INCLUDE_CFM
 #define CONFIG_INCLUDE_PRES_FORWARD
+#define CONFIG_INCLUDE_SOC_TIME_FORWARD
 
 #define CONFIG_DLLCAL_QUEUE                         CIRCBUF_QUEUE
-
-// Update device name to avoid conflict in zynq emacps design
-// 267200 corresponds to Z7200 architecture of Zynq family. (Z is represented by 26)
-#if (CONFIG_EDRV == 267200)
-#define PLK_VETH_NAME                               "plk_veth"
-#endif
 
 //==============================================================================
 // Ethernet driver (Edrv) specific defines
 //==============================================================================
-
-// switch this define to TRUE if Edrv supports fast tx frames
-#define CONFIG_EDRV_FAST_TXFRAMES                   FALSE
-
-// switch this define to TRUE if Edrv supports early receive interrupts
-#define CONFIG_EDRV_EARLY_RX_INT                    FALSE
 
 // switch this define to TRUE if Edrv supports auto delay responses
 #define CONFIG_EDRV_AUTO_RESPONSE_DELAY             FALSE
@@ -89,14 +79,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //==============================================================================
 // Data Link Layer (DLL) specific defines
 //==============================================================================
-
-// switch this define to TRUE if Edrv supports fast tx frames
-// and DLL shall pass PRes as ready to Edrv after SoC
-#define CONFIG_DLL_PRES_READY_AFTER_SOC             FALSE
-
-// switch this define to TRUE if Edrv supports fast tx frames
-// and DLL shall pass PRes as ready to Edrv after SoA
-#define CONFIG_DLL_PRES_READY_AFTER_SOA             FALSE
 
 // CN supports PRes Chaining
 #define CONFIG_DLL_PRES_CHAINING_CN                 FALSE

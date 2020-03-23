@@ -12,7 +12,7 @@ stack. Additionally, it provides status information to the user part.
 *******************************************************************************/
 
 /*------------------------------------------------------------------------------
-Copyright (c) 2016, Bernecker+Rainer Industrie-Elektronik Ges.m.b.H. (B&R)
+Copyright (c) 2017, B&R Industrial Automation GmbH
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -400,7 +400,7 @@ chunk. The maximum chunk size can be obtained by calling
 //------------------------------------------------------------------------------
 tOplkError ctrlk_readFileChunk(tOplkApiFileChunkDesc* pDesc_p,
                                size_t bufferSize_p,
-                               UINT8* pBuffer_p)
+                               void* pBuffer_p)
 {
     if ((pDesc_p == NULL) || (bufferSize_p == 0) || (pBuffer_p == NULL))
         return kErrorInvalidInstanceParam;
@@ -471,9 +471,8 @@ static tOplkError initStack(void)
         return ret;
 
     // initialize Edrv
-    OPLK_MEMCPY(edrvInitParam.aMacAddr, instance_l.initParam.aMacAddress, 6);
-    edrvInitParam.hwParam.devNum = instance_l.initParam.ethDevNumber;
-    edrvInitParam.hwParam.pDevName = instance_l.initParam.szEthDevName;
+    OPLK_MEMCPY(edrvInitParam.aMacAddr, instance_l.initParam.aMacAddress, sizeof(edrvInitParam.aMacAddr));
+    edrvInitParam.pDevName = instance_l.initParam.aNetIfName;
     edrvInitParam.pfnRxHandler = dllkframe_processFrameReceived;
     ret = edrv_init(&edrvInitParam);
     if (ret != kErrorOk)
@@ -481,7 +480,7 @@ static tOplkError initStack(void)
 
     // copy local MAC address from Ethernet driver back to init parameters
     // because Ethernet driver may have read it from controller EEPROM
-    OPLK_MEMCPY(instance_l.initParam.aMacAddress, edrv_getMacAddr(), 6);
+    OPLK_MEMCPY(instance_l.initParam.aMacAddress, edrv_getMacAddr(), sizeof(instance_l.initParam.aMacAddress));
     ctrlkcal_storeInitParam(&instance_l.initParam);
 
     // initialize Edrvcyclic
@@ -624,7 +623,7 @@ static void setupKernelFeatures(void)
     instance_l.features |= OPLK_KERNEL_RMN;
 #endif
 
-#if (CONFIG_DLL_PRES_CHAINING_CN == TRUE)
+#if (CONFIG_DLL_PRES_CHAINING_CN != FALSE)
     instance_l.features |= OPLK_KERNEL_PRES_CHAINING_CN;
 #endif
 

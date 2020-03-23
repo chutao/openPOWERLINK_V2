@@ -74,6 +74,7 @@
     <VerifyProjectOutput>True</VerifyProjectOutput>
     <VerifyDrivers />
     <VerifyFlags>133563</VerifyFlags>
+    <OutDir>$(SolutionDir)..\..\..\..\bin\windows\x86\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Release|Win32'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
@@ -87,6 +88,7 @@
     <VerifyProjectOutput>True</VerifyProjectOutput>
     <VerifyDrivers />
     <VerifyFlags>133563</VerifyFlags>
+    <OutDir>$(SolutionDir)..\..\..\..\bin\windows\x86\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|x64'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
@@ -100,7 +102,7 @@
     <VerifyProjectOutput>True</VerifyProjectOutput>
     <VerifyDrivers />
     <VerifyFlags>133563</VerifyFlags>
-    <OutDir>$(SolutionDir)..\..\..\..\bin\windows\$(PROCESSOR_ARCHITEW6432)\</OutDir>
+    <OutDir>$(SolutionDir)..\..\..\..\bin\windows\amd64\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Release|x64'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
@@ -114,7 +116,7 @@
     <VerifyProjectOutput>True</VerifyProjectOutput>
     <VerifyDrivers />
     <VerifyFlags>133563</VerifyFlags>
-    <OutDir>$(SolutionDir)..\..\..\..\bin\windows\$(PROCESSOR_ARCHITEW6432)\</OutDir>
+    <OutDir>$(SolutionDir)..\..\..\..\bin\windows\amd64\</OutDir>
   </PropertyGroup>
   <ItemGroup>
     <FilesToPackage Include="@(Inf->'%(CopyOutput)')" Condition="'@(Inf)'!=''" />

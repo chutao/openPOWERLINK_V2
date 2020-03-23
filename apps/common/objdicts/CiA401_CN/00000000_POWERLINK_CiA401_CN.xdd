@@ -5,9 +5,12 @@
   (c) SYSTEC electronic GmbH, D-07973 Greiz, August-Bebel-Str. 29
       www.systec-electronic.com
 
-  (c) Bernecker + Rainer Industrie-Elektronik Ges.m.b.H.
+  (c) B&R Industrial Automation GmbH
       B&R Strasse 1, A-5142 Eggelsberg
       www.br-automation.com
+
+  (c) Kalycito Infotech Private Limited
+      www.kalycito.com
 
   Project:      openPOWERLINK
 
@@ -75,12 +78,12 @@
     <ProfileBody
       xsi:type="ProfileBody_Device_Powerlink"
       fileName="00000000_POWERLINK_CiA401.xdd"
-      fileCreator="Bernecker+Rainer Industrie-Elektronik Ges.m.b.H."
+      fileCreator="B&amp;R Industrial Automation GmbH"
       fileCreationDate="2011-04-01"
       fileCreationTime="10:00:00+02:00"
-      fileModificationDate="2017-04-11"
-      fileModificationTime="14:00:00+01:00"
-      fileModifiedBy="Bernecker+Rainer Industrie-Elektronik Ges.m.b.H."
+      fileModificationDate="2018-11-05"
+      fileModificationTime="12:40:00+01:00"
+      fileModifiedBy="B&amp;R Industrial Automation GmbH"
       fileVersion="01.00"
       supportedLanguages="en">
       <DeviceIdentity>
@@ -89,7 +92,7 @@
         <productName>openPOWERLINK device</productName>
         <version versionType="HW">1.00</version>
         <version versionType="SW">1.00</version>
-        <version versionType="FW">OPLK V2.5.2</version>
+        <version versionType="FW">OPLK V2.7.1</version>
       </DeviceIdentity>
       <DeviceFunction>
         <capabilities>
@@ -139,12 +142,12 @@
     <ProfileBody
       xsi:type="ProfileBody_CommunicationNetwork_Powerlink"
       fileName="00000000_POWERLINK_CiA401.xdd"
-      fileCreator="Bernecker+Rainer Industrie-Elektronik Ges.m.b.H."
+      fileCreator="B&amp;R Industrial Automation GmbH"
       fileCreationDate="2011-04-01"
       fileCreationTime="10:00:00+02:00"
-      fileModificationDate="2017-04-11"
-      fileModificationTime="14:00:00+01:00"
-      fileModifiedBy="Bernecker+Rainer Industrie-Elektronik Ges.m.b.H."
+      fileModificationDate="2018-11-05"
+      fileModificationTime="12:40:00+01:00"
+      fileModifiedBy="B&amp;R Industrial Automation GmbH"
       fileVersion="01.00"
       supportedLanguages="en">
       <ApplicationLayers>
@@ -244,12 +247,12 @@
           <Object index="1006" name="NMT_CycleLen_U32" objectType="7" dataType="0007" accessType="rw" PDOmapping="no" defaultValue="1000"/>
           <Object index="1008" name="NMT_ManufactDevName_VS" objectType="7" dataType="0009" accessType="const" PDOmapping="no" defaultValue="openPOWERLINK device"/>
           <Object index="1009" name="NMT_ManufactHwVers_VS" objectType="7" dataType="0009" accessType="const" PDOmapping="no" defaultValue="1.00"/>
-          <Object index="100A" name="NMT_ManufactSwVers_VS" objectType="7" dataType="0009" accessType="const" PDOmapping="no" defaultValue="OPLK V2.5.2"/>
+          <Object index="100A" name="NMT_ManufactSwVers_VS" objectType="7" dataType="0009" accessType="const" PDOmapping="no" defaultValue="OPLK V2.7.1"/>
           <Object index="1018" name="NMT_IdentityObject_REC" objectType="9">
             <SubObject subIndex="00" name="NumberOfEntries" objectType="7" dataType="0005" accessType="const" PDOmapping="no" defaultValue="4"/>
             <SubObject subIndex="01" name="VendorId_U32" objectType="7" dataType="0007" accessType="const" PDOmapping="no" defaultValue="0x00000000"/>
             <SubObject subIndex="02" name="ProductCode_U32" objectType="7" dataType="0007" accessType="const" PDOmapping="no" defaultValue="0x00000000"/>
-            <SubObject subIndex="03" name="RevisionNo_U32" objectType="7" dataType="0007" accessType="const" PDOmapping="no" defaultValue="0x00020005"/>
+            <SubObject subIndex="03" name="RevisionNo_U32" objectType="7" dataType="0007" accessType="const" PDOmapping="no" defaultValue="0x00020007"/>
             <SubObject subIndex="04" name="SerialNo_U32" objectType="7" dataType="0007" accessType="const" PDOmapping="no"/>
           </Object>
           <Object index="1020" name="CFM_VerifyConfiguration_REC" objectType="9">
@@ -935,9 +938,9 @@
             <SubObject subIndex="FD" name="NodeAssignment" objectType="7" dataType="0007" accessType="rw" PDOmapping="no" defaultValue="0"/>
             <SubObject subIndex="FE" name="NodeAssignment" objectType="7" dataType="0007" accessType="rw" PDOmapping="no" defaultValue="0"/>
           </Object>
-          <Object index="1F82" name="NMT_FeatureFlags_U32" objectType="7" dataType="0007" accessType="const" PDOmapping="no" defaultValue="0x00050265"/>
+          <Object index="1F82" name="NMT_FeatureFlags_U32" objectType="7" dataType="0007" accessType="const" PDOmapping="no" defaultValue="0x00058265"/>
           <Object index="1F83" name="NMT_EPLVersion_U8" objectType="7" dataType="0005" accessType="const" PDOmapping="no" defaultValue="0x20"/>
-          <Object index="1F8C" name="NMT_CurrNMTState_U8" objectType="7" dataType="0005" PDOmapping="optional" accessType="ro"/>
+          <Object index="1F8C" name="NMT_CurrNMTState_U8" objectType="7" dataType="0005" PDOmapping="no" accessType="ro"/>
           <Object index="1F8D" name="NMT_PResPayloadLimitList_AU16" objectType="8" dataType="0006">
             <SubObject subIndex="00" name="NumberOfEntries" objectType="7" dataType="0005" accessType="rw" PDOmapping="no" defaultValue="254"/>
             <SubObject subIndex="01" name="PResPayloadLimit" objectType="7" dataType="0006" accessType="rw" PDOmapping="no" defaultValue="36"/>
@@ -1547,7 +1550,8 @@
           SDOCmdReadAllByIndex="false"
           SDOCmdWriteByName="false"
           SDOCmdReadByName="false"
-          SDOCmdWriteMultParam="false"
+          SDOCmdWriteMultParam="true"
+          SDOCmdReadMultParam="true"
           NMTFlushArpEntry="false"
           NMTNetHostNameSet="false"
           PDORPDOChannels="3"

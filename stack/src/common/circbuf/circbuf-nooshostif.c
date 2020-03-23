@@ -18,7 +18,7 @@ implementation is applied.
 *******************************************************************************/
 
 /*------------------------------------------------------------------------------
-Copyright (c) 2016, Bernecker+Rainer Industrie-Elektronik Ges.m.b.H. (B&R)
+Copyright (c) 2017, B&R Industrial Automation GmbH
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -96,7 +96,7 @@ const tHostifInstanceId hostifInstance[NR_OF_CIRC_BUFFERS] =
         kHostifInstIdTxVethQueue,   ///< Queue for sending virtual Ethernet frames in the DLLCAL
 };
 
-#if (CONFIG_HOSTIF_PCP == TRUE)
+#if (CONFIG_HOSTIF_PCP != FALSE)
 #define CIRCBUF_HOSTIF_LOCK_LOCAL       0
 #define CIRCBUF_HOSTIF_LOCK_OTHER       1
 #else
@@ -252,7 +252,7 @@ tCircBufError circbuf_allocBuffer(tCircBufInstance* pInstance_p, size_t* pSize_p
             return kCircBufNoResource;
         }
 
-        pInstance_p->pCircBuf = ((BYTE*)pInstance_p->pCircBufHeader) + sizeof(tCircBufHeader);
+        pInstance_p->pCircBuf = (UINT8*)pInstance_p->pCircBufHeader + sizeof(tCircBufHeader);
 
         // Return buffer size: pSize_p already holds the right value!
     }
@@ -260,8 +260,8 @@ tCircBufError circbuf_allocBuffer(tCircBufInstance* pInstance_p, size_t* pSize_p
     {   // Queue must use host interface
         tHostifReturn           ret;
         tHostifInstance         pHostif = (tHostifInstance*)pInstance_p->pCircBufArchInstance;
-        UINT8*                  pBufBase;
-        UINT                    bufSize;
+        void*                   pBufBase;
+        size_t                  bufSize;
         tCircBufHostiBuffer*    pHostifBuffer;
 
         // Get buffer for queue
@@ -277,8 +277,8 @@ tCircBufError circbuf_allocBuffer(tCircBufInstance* pInstance_p, size_t* pSize_p
         // Check if there is enough memory available
         if (size > bufSize)
         {
-            DEBUG_LVL_ERROR_TRACE("%s Hostif buffer (id=%d) only provides %d byte instead of %d byte!\n",
-                                  __func__, pInstance_p->bufferId, bufSize, size);
+            DEBUG_LVL_ERROR_TRACE("%s Hostif buffer (id=%d) only provides %lu Bytes instead of %lu Bytes!\n",
+                                  __func__, pInstance_p->bufferId, (ULONG)bufSize, (ULONG)size);
             return kCircBufNoResource;
         }
 
@@ -339,8 +339,8 @@ tCircBufError circbuf_connectBuffer(tCircBufInstance* pInstance_p)
     {   // Queue must use host interface
         tHostifReturn           ret;
         tHostifInstance         pHostif = (tHostifInstance*)pInstance_p->pCircBufArchInstance;
-        UINT8*                  pBufBase;
-        UINT                    bufSize;
+        void*                   pBufBase;
+        size_t                  bufSize;
         tCircBufHostiBuffer*    pHostifBuffer;
 
         // Get buffer for queue
@@ -445,8 +445,8 @@ void circbuf_unlock(tCircBufInstance* pInstance_p)
     if (pInstance_p->pCircBufArchInstance != NULL)
     {
         tCircBufHostiBuffer* pHostifBuf = GET_QUEUE_BUF_BASE(pInstance_p->pCircBufHeader);
-        tCircBufHostifLock*     pLock = &pHostifBuf->lock;
-        UINT8                   local = CIRCBUF_HOSTIF_LOCK_LOCAL;
+        tCircBufHostifLock*  pLock = &pHostifBuf->lock;
+        UINT8                local = CIRCBUF_HOSTIF_LOCK_LOCAL;
 
         OPLK_IO_WR8(&pLock->afFlag[local], 0);
         OPLK_DCACHE_FLUSH(&pLock->afFlag[local], sizeof(pLock->afFlag[local]));

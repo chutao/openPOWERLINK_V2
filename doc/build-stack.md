@@ -99,7 +99,7 @@ Follow the steps below to build the stack library on your host platform:
   Refer to \ref sect_build_stack_options_noos_microblaze for details!
 
 The default library installation path is:
-`<openPOWERLINK_dir>/stack/lib/generic/microblaze/<BOARD_NAME>/<DEMO_NAME>`
+`<openPOWERLINK_dir>/stack/lib/generic/microblazeise/<BOARD_NAME>/<DEMO_NAME>`
 
 ### Xilinx Microblaze (Vivado) {#sect_build_stack_build_microblaze}
 
@@ -122,42 +122,36 @@ Follow the steps below to build the stack library on your host platform:
   * On a Windows host platform
 
         > cd <openPOWERLINK_dir>\stack\build\xilinx-microblaze
-        > cmake -GUnix\ Makefiles -DCMAKE_TOOLCHAIN_FILE=../../../cmake/toolchain-xilinx-microblaze-gnu.cmake ../.. -DCMAKE_BUILD_TYPE=Debug -DCFG_COMPILE_LIB_[LIB_NAME]=ON -DCFG_COMPILE_LIB_[LIB_NAME]_LIB_DIR=[PATH_TO_HW_LIB]
+        > cmake -GUnix\ Makefiles -DCMAKE_TOOLCHAIN_FILE=../../../cmake/toolchain-xilinx-microblaze-gnu.cmake ../.. -DCMAKE_BUILD_TYPE=Debug -DCFG_COMPILE_LIB_[LIB_NAME]=ON
         > make all
         > make install
 
   * On a Linux host platform
 
         > cd <openPOWERLINK_dir>\stack\build\xilinx-microblaze
-        > cmake -DCMAKE_TOOLCHAIN_FILE=../../../cmake/toolchain-xilinx-microblaze-gnu.cmake ../.. -DCMAKE_BUILD_TYPE=Debug -DCFG_COMPILE_LIB_[LIB_NAME]=ON -DCFG_COMPILE_LIB_[LIB_NAME]_LIB_DIR=[PATH_TO_HW_LIB]
+        > cmake -GUnix\ Makefiles -DCMAKE_TOOLCHAIN_FILE=../../../cmake/toolchain-xilinx-microblaze-gnu.cmake ../.. -DCMAKE_BUILD_TYPE=Debug -DCFG_COMPILE_LIB_[LIB_NAME]=ON
         > make all
         > make install
 
-  This will create the `[LIB_NAME]` stack library (debug) for the hardware library in `[PATH_TO_HW_LIB]`.
-  Multiple stack libraries can be built together by passing the define pairs (`CFG_COMPILE_LIB_[LIB_NAME]`
-  and `CFG_COMPILE_LIB_[LIB_NAME]_LIB_DIR`) for each stack library to CMake.
-  Refer to \ref sect_build_stack_options_noos_microblaze for details!
+  This will create the `[LIB_NAME]` stack library (debug) for the hardware library
 
 * Create release libraries
 
   * On a Windows host platform
 
         > cd <openPOWERLINK_dir>\stack\build\xilinx-microblaze
-        > cmake -GUnix\ Makefiles -DCMAKE_TOOLCHAIN_FILE=../../../cmake/toolchain-xilinx-microblaze-gnu.cmake ../.. -DCMAKE_BUILD_TYPE=Release -DCFG_COMPILE_LIB_[LIB_NAME]=ON -DCFG_COMPILE_LIB_[LIB_NAME]_LIB_DIR=[PATH_TO_HW_LIB]
+        > cmake -GUnix\ Makefiles -DCMAKE_TOOLCHAIN_FILE=../../../cmake/toolchain-xilinx-microblaze-gnu.cmake ../.. -DCMAKE_BUILD_TYPE=Release -DCFG_COMPILE_LIB_[LIB_NAME]=ON
         > make all
         > make install
 
   * On a Linux host platform
 
         > cd <openPOWERLINK_dir>\stack\build\xilinx-microblaze
-        > cmake -DCMAKE_TOOLCHAIN_FILE=../../../cmake/toolchain-xilinx-microblaze-gnu.cmake ../.. -DCMAKE_BUILD_TYPE=Release -DCFG_COMPILE_LIB_[LIB_NAME]=ON -DCFG_COMPILE_LIB_[LIB_NAME]_LIB_DIR=[PATH_TO_HW_LIB]
+        > cmake -GUnix\ Makefiles -DCMAKE_TOOLCHAIN_FILE=../../../cmake/toolchain-xilinx-microblaze-gnu.cmake ../.. -DCMAKE_BUILD_TYPE=Release -DCFG_COMPILE_LIB_[LIB_NAME]=ON
         > make all
         > make install
 
-  This will create the `[LIB_NAME]` stack library for the hardware library in `[PATH_TO_HW_LIB]`.
-  Multiple stack libraries can be built together by passing the define pairs (`CFG_COMPILE_LIB_[LIB_NAME]`
-  and `CFG_COMPILE_LIB_[LIB_NAME]_LIB_DIR`) for each stack library to CMake.
-  Refer to \ref sect_build_stack_options_noos_microblaze for details!
+  This will create the `[LIB_NAME]` stack library (release) for the hardware library
 
 The default library installation path is:
 `<openPOWERLINK_dir>/stack/lib/generic/microblaze/<BOARD_NAME>/<DEMO_NAME>`
@@ -268,7 +262,7 @@ the configuration options on the command line (-DCFG_XXX=XXX) or
 
 - **CFG_COMPILE_LIB_CNAPP_KERNELINTF**
 
-  Compile openPOWERLINK MN application library which contains the interface to
+  Compile openPOWERLINK CN application library which contains the interface to
   a Linux kernel space driver. It is used together with a Linux kernel module
   openPOWERLINK driver. It is configured to contain only CN functionality.
 
@@ -293,6 +287,13 @@ the configuration options on the command line (-DCFG_XXX=XXX) or
   kernel platform interface driver for status/control and data exchange with the kernel
   stack which runs on Zynq Microblaze as a baremetal application.
 
+- **CFG_COMPILE_LIB_CNAPP_ZYNQINTF**
+
+  Compile openPOWERLINK CN application library for Zynq platform, that contains the
+  interface to a Linux kernel platform interface driver. It is used along with the Linux
+  kernel platform interface driver for status/control and data exchange with the kernel
+  stack which runs on Zynq Microblaze as a baremetal application.
+
 - **CFG_COMPILE_LIB_CN_SIM**
 
   Compile a complete openPOWERLINK CN library including an open simulation
@@ -309,6 +310,11 @@ the configuration options on the command line (-DCFG_XXX=XXX) or
   High Resolution Timer, User Timer, Target System, modules for Process Sync and
   API Event. The connection to a simulation environment can be established by
   exported functions and function pointers.
+
+- **CFG_USE_PCAP_EDRV**
+
+  If this option is set to ON, the libaries will be compiled with libpcap for
+  network access instead of Linux raw sockets.
 
 ## Windows Configuration Options
 

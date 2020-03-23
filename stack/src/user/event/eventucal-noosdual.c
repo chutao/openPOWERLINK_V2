@@ -15,7 +15,7 @@ queues. User-internal events are processed directly.
 
 /*------------------------------------------------------------------------------
 Copyright (c) 2014, Kalycito Infotech Private Limited
-Copyright (c) 2016, Bernecker+Rainer Industrie-Elektronik Ges.m.b.H. (B&R)
+Copyright (c) 2016, B&R Industrial Automation GmbH
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -151,7 +151,7 @@ functions of the queue implementations for each used queue.
 //------------------------------------------------------------------------------
 tOplkError eventucal_exit(void)
 {
-    if (instance_l.fInitialized == TRUE)
+    if (instance_l.fInitialized != FALSE)
     {
         eventucal_exitQueueCircbuf(kEventQueueK2U);
         eventucal_exitQueueCircbuf(kEventQueueU2K);

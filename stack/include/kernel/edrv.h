@@ -8,7 +8,7 @@ This file contains definitions for the Ethernet driver module.
 *******************************************************************************/
 
 /*------------------------------------------------------------------------------
-Copyright (c) 2016, Bernecker+Rainer Industrie-Elektronik Ges.m.b.H. (B&R)
+Copyright (c) 2017, B&R Industrial Automation GmbH
 Copyright (c) 2013, SYSTEC electronic GmbH
 All rights reserved.
 
@@ -151,7 +151,7 @@ This structure is the Tx buffer descriptor.
 */
 struct sEdrvTxBuffer
 {
-    UINT                txFrameSize;        ///< Size of Tx frame (without CRC)
+    size_t              txFrameSize;        ///< Size of Tx frame (without CRC)
     UINT32              timeOffsetNs;       ///< Tx delay to a previously sent frame [ns]
     BOOL                fLaunchTimeValid;   ///< Flag to identify a valid launch time
     union
@@ -162,8 +162,8 @@ struct sEdrvTxBuffer
 
     tEdrvTxHandler      pfnTxHandler;       ///< Tx callback function
     tEdrvTxBufferNumber txBufferNumber;     ///< Edrv Tx buffer number
-    UINT8*              pBuffer;            ///< Pointer to the Tx buffer
-    UINT                maxBufferSize;      ///< Maximum size of the Tx buffer
+    void*               pBuffer;            ///< Pointer to the Tx buffer
+    size_t              maxBufferSize;      ///< Maximum size of the Tx buffer
 };
 
 /**
@@ -174,8 +174,8 @@ This structure is the Rx buffer descriptor.
 struct sEdrvRxBuffer
 {
     tEdrvBufferInFrame  bufferInFrame;      ///< Position of Rx buffer in a frame
-    UINT                rxFrameSize;        ///< Size of Rx frame (without CRC)
-    UINT8*              pBuffer;            ///< Pointer to the Rx buffer
+    size_t              rxFrameSize;        ///< Size of Rx frame (without CRC)
+    void*               pBuffer;            ///< Pointer to the Rx buffer
     tTimestamp*         pRxTimeStamp;       ///< Pointer to Rx time stamp
 };
 
@@ -186,9 +186,10 @@ This structure is used to initialize the Ethernet driver module.
 */
 typedef struct
 {
-    UINT8           aMacAddr[6];            ///< Ethernet controller MAC address
-    tEdrvRxHandler  pfnRxHandler;           ///< Rx frame callback function pointer
-    tHwParam        hwParam;                ///< Hardware parameter
+    UINT8                   aMacAddr[6];    ///< Ethernet controller MAC address
+    tEdrvRxHandler          pfnRxHandler;   ///< Rx frame callback function pointer
+    const char*             pDevName;       ///< Device name of the network interface card (valid if non-null)
+    OPLK_DEPRECATED UINT    devNum;         ///< Device number (deprecated)
 } tEdrvInitParam;
 
 /**
@@ -237,7 +238,7 @@ tOplkError   edrv_releaseRxBuffer(tEdrvRxBuffer* pBuffer_p);
 tOplkError   edrv_updateTxBuffer(tEdrvTxBuffer* pBuffer_p);
 #endif
 
-#if (EDRV_USE_TTTX == TRUE)
+#if (EDRV_USE_TTTX != FALSE)
 tOplkError   edrv_getMacTime(UINT64* pCurtime_p);
 #endif
 

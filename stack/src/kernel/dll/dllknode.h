@@ -11,7 +11,7 @@ It is part of the DLL kernel module.
 
 /*------------------------------------------------------------------------------
 Copyright (c) 2013, SYSTEC electronic GmbH
-Copyright (c) 2016, Bernecker+Rainer Industrie-Elektronik Ges.m.b.H. (B&R)
+Copyright (c) 2016, B&R Industrial Automation GmbH
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -85,9 +85,9 @@ tOplkError dllknode_issueLossOfPres(UINT nodeId_p);
 #endif
 
 #if (NMT_MAX_NODE_ID > 0)
-tDllkNodeInfo* dllknode_getNodeInfo(UINT uiNodeId_p) SECTION_DLLK_GETNODEINFO;
+tDllkNodeInfo* dllknode_getNodeInfo(UINT nodeId_p) SECTION_DLLK_GETNODEINFO;
 tOplkError     dllknode_addNodeFilter(tDllkNodeInfo* pIntNodeInfo_p,
-                                      tDllNodeOpType NodeOpType_p,
+                                      tDllNodeOpType nodeOpType_p,
                                       BOOL fUpdateEdrv_p);
 tOplkError     dllknode_deleteNodeFilter(tDllkNodeInfo* pIntNodeInfo_p,
                                          tDllNodeOpType nodeOpType_p,

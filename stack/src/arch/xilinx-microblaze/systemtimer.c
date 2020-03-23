@@ -10,7 +10,7 @@ Initialize the system timer and count the milliseconds
 *******************************************************************************/
 
 /*------------------------------------------------------------------------------
-Copyright (c) 2016, Bernecker+Rainer Industrie-Elektronik Ges.m.b.H. (B&R)
+Copyright (c) 2016, B&R Industrial Automation GmbH
 Copyright (c) 2014, Kalycito Infotech Private Limited
 All rights reserved.
 
@@ -60,7 +60,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #if (CONFIG_PCP == FALSE)
 #define TGT_INTC_BASE           XPAR_INTC_0_BASEADDR
 #define TGT_TIMER_INTR          XPAR_HOST_INTC_FIT_TIMER_0_INTERRUPT_INTR
-#elif (CONFIG_PCP == TRUE)
+#elif (CONFIG_PCP != FALSE)
 #define TGT_INTC_BASE           XPAR_INTC_0_BASEADDR
 #define TGT_TIMER_INTR          XPAR_PCP_INTC_FIT_TIMER_0_INTERRUPT_INTR
 #else

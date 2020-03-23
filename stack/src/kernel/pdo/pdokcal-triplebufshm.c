@@ -19,7 +19,8 @@ without locking, the buffer switching has to be performed in an atomic operation
 *******************************************************************************/
 
 /*------------------------------------------------------------------------------
-Copyright (c) 2016, Bernecker+Rainer Industrie-Elektronik Ges.m.b.H. (B&R)
+Copyright (c) 2017, B&R Industrial Automation GmbH
+Copyright (c) 2018, Kalycito Infotech Private Limited
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -85,7 +86,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //------------------------------------------------------------------------------
 static tPdoMemRegion*       pPdoMem_l;
 static size_t               pdoMemRegionSize_l;
-static UINT8*               pTripleBuf_l[3];
+static void*                pTripleBuf_l[3];
 
 //------------------------------------------------------------------------------
 // local function prototypes
@@ -113,7 +114,7 @@ The function returns the address of the PDO memory region.
 \ingroup module_pdokcal
 */
 //------------------------------------------------------------------------------
-tOplkError pdokcal_getPdoMemRegion(UINT8** ppPdoMemBase, size_t* pPdoMemSize_p)
+tOplkError pdokcal_getPdoMemRegion(void** ppPdoMemBase, size_t* pPdoMemSize_p)
 {
     if (ppPdoMemBase == NULL)
         return kErrorInvalidOperation;
@@ -121,7 +122,7 @@ tOplkError pdokcal_getPdoMemRegion(UINT8** ppPdoMemBase, size_t* pPdoMemSize_p)
     if (pPdoMemSize_p != NULL)
         *pPdoMemSize_p = pdoMemRegionSize_l;
 
-    *ppPdoMemBase = (UINT8*)pPdoMem_l;
+    *ppPdoMemBase = pPdoMem_l;
 
     return kErrorOk;
 }
@@ -145,7 +146,7 @@ tOplkError pdokcal_initPdoMem(const tPdoChannelSetup* pPdoChannels,
                               size_t rxPdoMemSize_p,
                               size_t txPdoMemSize_p)
 {
-    UINT8*  pMem;
+    void*   pMem;
     size_t  pdoMemSize;
 
     // Check parameter validity
@@ -154,7 +155,7 @@ tOplkError pdokcal_initPdoMem(const tPdoChannelSetup* pPdoChannels,
     pdoMemSize = txPdoMemSize_p + rxPdoMemSize_p;
 
     if (pPdoMem_l != NULL)
-        pdokcal_freeMem((BYTE*)pPdoMem_l, pdoMemRegionSize_l);
+        pdokcal_freeMem(pPdoMem_l, pdoMemRegionSize_l);
 
     pdoMemRegionSize_l = (pdoMemSize * 3) + sizeof(tPdoMemRegion);
     if (pdokcal_allocateMem(pdoMemRegionSize_l, &pMem) != kErrorOk)
@@ -162,9 +163,9 @@ tOplkError pdokcal_initPdoMem(const tPdoChannelSetup* pPdoChannels,
 
     pPdoMem_l = (tPdoMemRegion*)pMem;
 
-    pTripleBuf_l[0] = (BYTE*)pPdoMem_l + sizeof(tPdoMemRegion);
-    pTripleBuf_l[1] = pTripleBuf_l[0] + pdoMemSize;
-    pTripleBuf_l[2] = pTripleBuf_l[1] + pdoMemSize;
+    pTripleBuf_l[0] = (UINT8*)pPdoMem_l + sizeof(tPdoMemRegion);
+    pTripleBuf_l[1] = (UINT8*)pTripleBuf_l[0] + pdoMemSize;
+    pTripleBuf_l[2] = (UINT8*)pTripleBuf_l[1] + pdoMemSize;
 
     DEBUG_LVL_PDO_TRACE("%s() PdoMem:%p size:%d Triple buffers at: %p/%p/%p\n",
                         __func__,
@@ -196,7 +197,7 @@ void pdokcal_cleanupPdoMem(void)
     DEBUG_LVL_PDO_TRACE("%s()\n", __func__);
 
     if (pPdoMem_l != NULL)
-        pdokcal_freeMem((UINT8*)pPdoMem_l, pdoMemRegionSize_l);
+        pdokcal_freeMem(pPdoMem_l, pdoMemRegionSize_l);
 
     pPdoMem_l = NULL;
     pdoMemRegionSize_l = 0;
@@ -220,9 +221,9 @@ The function writes a received RXPDO into the PDO memory range.
 \ingroup module_pdokcal
 */
 //------------------------------------------------------------------------------
-tOplkError pdokcal_writeRxPdo(UINT channelId_p, const UINT8* pPayload_p, UINT16 pdoSize_p)
+tOplkError pdokcal_writeRxPdo(UINT8 channelId_p, const void* pPayload_p, UINT16 pdoSize_p)
 {
-    UINT8*          pPdo;
+    void*           pPdo;
     OPLK_ATOMIC_T   temp;
 
     // Check parameter validity
@@ -231,7 +232,7 @@ tOplkError pdokcal_writeRxPdo(UINT channelId_p, const UINT8* pPayload_p, UINT16 
     // Invalidate data cache for addressed rxChannelInfo
     OPLK_DCACHE_INVALIDATE(&(pPdoMem_l->rxChannelInfo[channelId_p]), sizeof(tPdoBufferInfo));
 
-    pPdo = pTripleBuf_l[pPdoMem_l->rxChannelInfo[channelId_p].writeBuf] +
+    pPdo = (UINT8*)pTripleBuf_l[pPdoMem_l->rxChannelInfo[channelId_p].writeBuf] +
            pPdoMem_l->rxChannelInfo[channelId_p].channelOffset;
     //TRACE("%s() chan:%d wi:%d\n", __func__, channelId_p, pPdoMem_l->rxChannelInfo[channelId_p].writeBuf);
 
@@ -239,6 +240,11 @@ tOplkError pdokcal_writeRxPdo(UINT channelId_p, const UINT8* pPayload_p, UINT16 
 
     OPLK_DCACHE_FLUSH(pPdo, pdoSize_p);
 
+    // Invalidate the cache again, as the previous cache invalidation is
+    // not under the lock context, and also the value of .cleanBuf may
+    // be changed on the physical memory.
+    OPLK_DCACHE_INVALIDATE(&(pPdoMem_l->rxChannelInfo[channelId_p]),
+                           sizeof(tPdoBufferInfo));
     temp = pPdoMem_l->rxChannelInfo[channelId_p].writeBuf;
     OPLK_ATOMIC_EXCHANGE(&pPdoMem_l->rxChannelInfo[channelId_p].cleanBuf,
                          temp,
@@ -247,8 +253,8 @@ tOplkError pdokcal_writeRxPdo(UINT channelId_p, const UINT8* pPayload_p, UINT16 
     pPdoMem_l->rxChannelInfo[channelId_p].newData = 1;
 
     // Flush data cache for variables changed in this function
-    OPLK_DCACHE_FLUSH(&(pPdoMem_l->rxChannelInfo[channelId_p].writeBuf), sizeof(OPLK_ATOMIC_T));
-    OPLK_DCACHE_FLUSH(&(pPdoMem_l->rxChannelInfo[channelId_p].newData), sizeof(UINT8));
+    OPLK_DCACHE_FLUSH(&(pPdoMem_l->rxChannelInfo[channelId_p]),
+                      sizeof(tPdoBufferInfo));
 
     //TRACE("%s() chan:%d new wi:%d\n", __func__, channelId_p, pPdoMem_l->rxChannelInfo[channelId_p].writeBuf);
     //TRACE("%s() *pPayload_p:%02x\n", __func__, *pPayload_p);
@@ -270,9 +276,9 @@ The function reads a TXPDO to be sent from the PDO memory range.
 \ingroup module_pdokcal
 */
 //------------------------------------------------------------------------------
-tOplkError pdokcal_readTxPdo(UINT channelId_p, UINT8* pPayload_p, UINT16 pdoSize_p)
+tOplkError pdokcal_readTxPdo(UINT8 channelId_p, void* pPayload_p, UINT16 pdoSize_p)
 {
-    UINT8*          pPdo;
+    void*           pPdo;
     OPLK_ATOMIC_T   readBuf;
 
     // Check parameter validity
@@ -290,11 +296,11 @@ tOplkError pdokcal_readTxPdo(UINT channelId_p, UINT8* pPayload_p, UINT16 pdoSize
         pPdoMem_l->txChannelInfo[channelId_p].newData = 0;
 
         // Flush data cache for variables changed in this function
-        OPLK_DCACHE_FLUSH(&(pPdoMem_l->txChannelInfo[channelId_p].readBuf), sizeof(OPLK_ATOMIC_T));
-        OPLK_DCACHE_FLUSH(&(pPdoMem_l->txChannelInfo[channelId_p].newData), sizeof(UINT8));
+        OPLK_DCACHE_FLUSH(&(pPdoMem_l->txChannelInfo[channelId_p]),
+                          sizeof(tPdoBufferInfo));
     }
 
-    pPdo = pTripleBuf_l[pPdoMem_l->txChannelInfo[channelId_p].readBuf] +
+    pPdo = (UINT8*)pTripleBuf_l[pPdoMem_l->txChannelInfo[channelId_p].readBuf] +
                pPdoMem_l->txChannelInfo[channelId_p].channelOffset;
 
     DEBUG_LVL_PDO_TRACE("%s() chan:%d ri:%d\n",
@@ -329,7 +335,7 @@ shared buffer and the size are stored.
 static void setupPdoMemInfo(const tPdoChannelSetup* pPdoChannels_p,
                             tPdoMemRegion* pPdoMemRegion_p)
 {
-    UINT                channelId;
+    UINT8               channelId;
     UINT                offset;
     const tPdoChannel*  pPdoChannel;
 

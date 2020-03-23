@@ -12,7 +12,7 @@ memory interface using dual processor library.
 
 /*------------------------------------------------------------------------------
 Copyright (c) 2015, Kalycito Infotech Private Limited
-Copyright (c) 2016, Bernecker+Rainer Industrie-Elektronik Ges.m.b.H. (B&R)
+Copyright (c) 2016, B&R Industrial Automation GmbH
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -298,87 +298,6 @@ void dualprocshm_targetWriteData(void* pBase_p,
     DUALPROCSHM_MEMCPY(pBase_p, pData_p, size_p);
 
     DUALPROCSHM_FLUSH_DCACHE_RANGE((UINT32)pBase_p, size_p);
-}
-
-//------------------------------------------------------------------------------
-/**
-\brief  Target specific memory lock routine(acquire)
-
-This routine implements a target specific locking mechanism using the shared
-memory between two processors/processes. The caller needs to pass the base
-address and processor instance of the calling processor.
-
-\param[in,out]  pBase_p             Base address of the lock memory.
-\param[in]      procInstance_p      Processor instance of the calling processor.
-
-\ingroup module_dualprocshm
- */
-//------------------------------------------------------------------------------
-void dualprocshm_targetAcquireLock(tDualprocLock* pBase_p,
-                                   tDualProcInstance procInstance_p)
-{
-    volatile UINT8  lock = 0;
-    UINT8           lockToken;
-
-    if (pBase_p == NULL)
-        return;
-
-    switch (procInstance_p)
-    {
-        case kDualProcFirst:
-        case kDualProcSecond:
-            lockToken = procInstance_p + 1;
-            break;
-
-        default:
-            TRACE("Invalid processor instance\n");
-            return;
-    }
-
-    // spin till the passed token is written into memory
-    do
-    {
-        DUALPROCSHM_INVALIDATE_DCACHE_RANGE((UINT32)&pBase_p->lockToken, 1);
-        lock = DPSHM_READ8((UINT32)&pBase_p->lockToken);
-
-        if (lock == DEFAULT_LOCK_ID)
-        {
-            DPSHM_WRITE8((UINT32)&pBase_p->lockToken, lockToken);
-            DUALPROCSHM_FLUSH_DCACHE_RANGE((UINT32)&pBase_p->lockToken, 1);
-            // Avoid re-ordering of load-store instruction to avoid
-            // memory corruption. This ensures the successful write of
-            // lock token in memory before the successive read.
-            DPSHM_DMB();
-            continue;
-        }
-    } while (lock != lockToken);
-}
-
-//------------------------------------------------------------------------------
-/**
-\brief  Target specific memory unlock routine (release)
-
-This routine is used to release a lock acquired before at a address specified.
-
-\param[in,out]  pBase_p             Base address of the lock memory.
-\param[in]      procInstance_p      Processor instance of the calling processor.
-
-\ingroup module_dualprocshm
- */
-//------------------------------------------------------------------------------
-void dualprocshm_targetReleaseLock(tDualprocLock* pBase_p,
-                                   tDualProcInstance procInstance_p)
-{
-    volatile UINT8  defaultlock = DEFAULT_LOCK_ID;
-
-    UNUSED_PARAMETER(procInstance_p);
-
-    if (pBase_p == NULL)
-        return;
-
-    DPSHM_WRITE8((UINT32)&pBase_p->lockToken, defaultlock);
-
-    DUALPROCSHM_FLUSH_DCACHE_RANGE((UINT32)&pBase_p->lockToken, sizeof(UINT8));
 }
 
 //------------------------------------------------------------------------------

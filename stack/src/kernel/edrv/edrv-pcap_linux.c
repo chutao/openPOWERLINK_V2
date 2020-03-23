@@ -10,7 +10,7 @@ This file contains the implementation of the Linux pcap Ethernet driver.
 *******************************************************************************/
 
 /*------------------------------------------------------------------------------
-Copyright (c) 2016, Bernecker+Rainer Industrie-Elektronik Ges.m.b.H. (B&R)
+Copyright (c) 2017, B&R Industrial Automation GmbH
 Copyright (c) 2013, Kalycito Infotech Private Limited
 All rights reserved.
 
@@ -142,7 +142,7 @@ tOplkError edrv_init(const tEdrvInitParam* pEdrvInitParam_p)
     // clear instance structure
     OPLK_MEMSET(&edrvInstance_l, 0, sizeof(edrvInstance_l));
 
-    if (pEdrvInitParam_p->hwParam.pDevName == NULL)
+    if (pEdrvInitParam_p->pDevName == NULL)
         return kErrorEdrvInit;
 
     // save the init data
@@ -158,7 +158,7 @@ tOplkError edrv_init(const tEdrvInitParam* pEdrvInitParam_p)
         (edrvInstance_l.initParam.aMacAddr[4] == 0) &&
         (edrvInstance_l.initParam.aMacAddr[5] == 0))
     {   // read MAC address from controller
-        getMacAdrs(edrvInstance_l.initParam.hwParam.pDevName,
+        getMacAdrs(edrvInstance_l.initParam.pDevName,
                    edrvInstance_l.initParam.aMacAddr);
     }
 
@@ -225,6 +225,7 @@ tOplkError edrv_exit(void)
 {
     // End the pcap loop and wait for the worker thread to terminate
     pcap_breakloop(edrvInstance_l.pPcapThread);
+    pthread_cancel(edrvInstance_l.hThread);
     pthread_join(edrvInstance_l.hThread, NULL);
 
     // Close pcap instance
@@ -280,7 +281,7 @@ tOplkError edrv_sendTxBuffer(tEdrvTxBuffer* pBuffer_p)
     if (pBuffer_p->txBufferNumber.pArg != NULL)
         return kErrorInvalidOperation;
 
-    if (getLinkStatus(edrvInstance_l.initParam.hwParam.pDevName) == FALSE)
+    if (getLinkStatus(edrvInstance_l.initParam.pDevName) == FALSE)
     {
         /* there's no link! We pretend that packet is sent and immediately call
          * tx handler! Otherwise the stack would hang! */
@@ -339,7 +340,7 @@ tOplkError edrv_allocTxBuffer(tEdrvTxBuffer* pBuffer_p)
         return kErrorEdrvNoFreeBufEntry;
 
     // allocate buffer with malloc
-    pBuffer_p->pBuffer = (UINT8*)OPLK_MALLOC(pBuffer_p->maxBufferSize);
+    pBuffer_p->pBuffer = OPLK_MALLOC(pBuffer_p->maxBufferSize);
     if (pBuffer_p->pBuffer == NULL)
         return kErrorEdrvNoFreeBufEntry;
 
@@ -363,7 +364,7 @@ This function releases the Tx buffer.
 //------------------------------------------------------------------------------
 tOplkError edrv_freeTxBuffer(tEdrvTxBuffer* pBuffer_p)
 {
-    UINT8* pBuffer;
+    void*   pBuffer;
 
     // Check parameter validity
     ASSERT(pBuffer_p != NULL);
@@ -484,7 +485,7 @@ static void packetHandler(u_char* pParam_p,
     {   // filter out self generated traffic
         rxBuffer.bufferInFrame = kEdrvBufferLastInFrame;
         rxBuffer.rxFrameSize = pHeader_p->caplen;
-        rxBuffer.pBuffer = (UINT8*)pPktData_p;
+        rxBuffer.pBuffer = (void*)pPktData_p;
 
         FTRACE_MARKER("%s RX", __func__);
         pInstance->initParam.pfnRxHandler(&rxBuffer);
@@ -520,32 +521,32 @@ static void packetHandler(u_char* pParam_p,
                 {
                     TRACE("%s: no matching TxB: DstMAC=%02X%02X%02X%02X%02X%02X\n",
                           __func__,
-                          (UINT)pPktData_p[0],
-                          (UINT)pPktData_p[1],
-                          (UINT)pPktData_p[2],
-                          (UINT)pPktData_p[3],
-                          (UINT)pPktData_p[4],
-                          (UINT)pPktData_p[5]);
+                          (UINT)((UINT8*)pPktData_p)[0],
+                          (UINT)((UINT8*)pPktData_p)[1],
+                          (UINT)((UINT8*)pPktData_p)[2],
+                          (UINT)((UINT8*)pPktData_p)[3],
+                          (UINT)((UINT8*)pPktData_p)[4],
+                          (UINT)((UINT8*)pPktData_p)[5]);
                     TRACE("   current TxB %p: DstMAC=%02X%02X%02X%02X%02X%02X\n",
                           (void*)pTxBuffer,
-                          (UINT)pTxBuffer->pBuffer[0],
-                          (UINT)pTxBuffer->pBuffer[1],
-                          (UINT)pTxBuffer->pBuffer[2],
-                          (UINT)pTxBuffer->pBuffer[3],
-                          (UINT)pTxBuffer->pBuffer[4],
-                          (UINT)pTxBuffer->pBuffer[5]);
+                          (UINT)((UINT8*)(pTxBuffer->pBuffer))[0],
+                          (UINT)((UINT8*)(pTxBuffer->pBuffer))[1],
+                          (UINT)((UINT8*)(pTxBuffer->pBuffer))[2],
+                          (UINT)((UINT8*)(pTxBuffer->pBuffer))[3],
+                          (UINT)((UINT8*)(pTxBuffer->pBuffer))[4],
+                          (UINT)((UINT8*)(pTxBuffer->pBuffer))[5]);
                 }
             }
         }
         else
         {
             TRACE("%s: no TxB: DstMAC=%02X%02X%02X%02X%02X%02X\n", __func__,
-                  pPktData_p[0],
-                  pPktData_p[1],
-                  pPktData_p[2],
-                  pPktData_p[3],
-                  pPktData_p[4],
-                  pPktData_p[5]);
+                  ((UINT8*)pPktData_p)[0],
+                  ((UINT8*)pPktData_p)[1],
+                  ((UINT8*)pPktData_p)[2],
+                  ((UINT8*)pPktData_p)[3],
+                  ((UINT8*)pPktData_p)[4],
+                  ((UINT8*)pPktData_p)[5]);
         }
     }
 }
@@ -566,8 +567,11 @@ static void* workerThread(void* pArgument_p)
 {
     tEdrvInstance*  pInstance = (tEdrvInstance*)pArgument_p;
     int             pcapRet;
+    int             oldCancelType;
 
     DEBUG_LVL_EDRV_TRACE("%s(): ThreadId:%ld\n", __func__, syscall(SYS_gettid));
+
+    pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, &oldCancelType);
 
     // Set up and activate the pcap live capture handle
     pInstance->pPcapThread = startPcap();
@@ -625,7 +629,7 @@ static pcap_t* startPcap(void)
     char    errorMessage[PCAP_ERRBUF_SIZE];
 
     // Create a pcap live capture handle
-    pPcapInst = pcap_create(edrvInstance_l.initParam.hwParam.pDevName, errorMessage);
+    pPcapInst = pcap_create(edrvInstance_l.initParam.pDevName, errorMessage);
     if (pPcapInst == NULL)
     {
         DEBUG_LVL_ERROR_TRACE("%s() Error!! Can't open pcap: %s\n", __func__, errorMessage);
@@ -640,7 +644,7 @@ static pcap_t* startPcap(void)
     // Set promiscuous mode for a not-yet-activated capture handle
     if (pcap_set_promisc(pPcapInst, 1) < 0)
     {
-        DEBUG_LVL_ERROR_TRACE("%s() couldn't set PCAP promiscious mode\n", __func__);
+        DEBUG_LVL_ERROR_TRACE("%s() couldn't set PCAP promiscuous mode\n", __func__);
     }
 
 // Pcap immediate mode only supported by libpcap >=1.5.0
@@ -672,7 +676,7 @@ This function gets the interface's MAC address.
 //------------------------------------------------------------------------------
 static void getMacAdrs(const char* pIfName_p, UINT8* pMacAddr_p)
 {
-    INT             fd;
+    int             fd;
     struct ifreq    ifr;
 
     fd = socket(AF_INET, SOCK_DGRAM, 0);

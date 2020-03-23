@@ -15,7 +15,7 @@ are added to process events in background.
 *******************************************************************************/
 
 /*------------------------------------------------------------------------------
-Copyright (c) 2016, Bernecker+Rainer Industrie-Elektronik Ges.m.b.H. (B&R)
+Copyright (c) 2016, B&R Industrial Automation GmbH
 Copyright (c) 2015, Kalycito Infotech Private Limited
 All rights reserved.
 
@@ -182,7 +182,7 @@ tOplkError eventucal_exit(void)
     UINT    i = 0;
 
     instance_l.fStopThread = TRUE;
-    while (instance_l.fStopThread == TRUE)
+    while (instance_l.fStopThread != FALSE)
     {
         target_msleep(10);
         if (i++ > 1000)

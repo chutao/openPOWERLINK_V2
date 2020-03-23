@@ -19,7 +19,8 @@ without locking, the buffer switching has to be performed in an atomic operation
 *******************************************************************************/
 
 /*------------------------------------------------------------------------------
-Copyright (c) 2016, Bernecker+Rainer Industrie-Elektronik Ges.m.b.H. (B&R)
+Copyright (c) 2017, B&R Industrial Automation GmbH
+Copyright (c) 2018, Kalycito Infotech Private Limited
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -85,7 +86,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //------------------------------------------------------------------------------
 static tPdoMemRegion*   pPdoMem_l;
 static size_t           memSize_l;
-static UINT8*           pTripleBuf_l[3];
+static void*            pTripleBuf_l[3];
 
 //------------------------------------------------------------------------------
 // local function prototypes
@@ -114,7 +115,7 @@ tOplkError pdoucal_initPdoMem(const tPdoChannelSetup* pPdoChannels_p,
                               size_t rxPdoMemSize_p,
                               size_t txPdoMemSize_p)
 {
-    UINT8*  pMem = NULL;
+    void*   pMem = NULL;
     size_t  pdoMemSize;
 
     UNUSED_PARAMETER(pPdoChannels_p);
@@ -137,8 +138,8 @@ tOplkError pdoucal_initPdoMem(const tPdoChannelSetup* pPdoChannels_p,
     pPdoMem_l = (tPdoMemRegion*)pMem;
 
     pTripleBuf_l[0] = (UINT8*)pPdoMem_l + sizeof(tPdoMemRegion);
-    pTripleBuf_l[1] = pTripleBuf_l[0] + pdoMemSize;
-    pTripleBuf_l[2] = pTripleBuf_l[1] + pdoMemSize;
+    pTripleBuf_l[1] = (UINT8*)pTripleBuf_l[0] + pdoMemSize;
+    pTripleBuf_l[2] = (UINT8*)pTripleBuf_l[1] + pdoMemSize;
 
     DEBUG_LVL_PDO_TRACE("%s() Mapped shared memory for PDO mem region at %p size %d\n",
                         __func__,
@@ -168,7 +169,7 @@ void pdoucal_cleanupPdoMem(void)
 {
     if (pPdoMem_l != NULL)
     {
-        if (pdoucal_freeMem((UINT8*)pPdoMem_l, memSize_l) != kErrorOk)
+        if (pdoucal_freeMem(pPdoMem_l, memSize_l) != kErrorOk)
         {
             DEBUG_LVL_ERROR_TRACE("%s() Unmapping shared PDO mem failed\n", __func__);
         }
@@ -188,10 +189,10 @@ The function returns the address of the TXPDO buffer specified.
 \ingroup module_pdoucal
 */
 //------------------------------------------------------------------------------
-UINT8* pdoucal_getTxPdoAdrs(UINT channelId_p)
+void* pdoucal_getTxPdoAdrs(UINT8 channelId_p)
 {
     OPLK_ATOMIC_T   wi;
-    UINT8*          pPdo;
+    void*           pPdo;
 
     // Invalidate data cache for addressed txChannelInfo
     OPLK_DCACHE_INVALIDATE(&(pPdoMem_l->txChannelInfo[channelId_p]), sizeof(tPdoBufferInfo));
@@ -203,7 +204,7 @@ UINT8* pdoucal_getTxPdoAdrs(UINT channelId_p)
                         channelId_p,
                         wi);
 
-    pPdo = pTripleBuf_l[wi] + pPdoMem_l->txChannelInfo[channelId_p].channelOffset;
+    pPdo = (UINT8*)pTripleBuf_l[wi] + pPdoMem_l->txChannelInfo[channelId_p].channelOffset;
 
     return pPdo;
 }
@@ -223,9 +224,9 @@ The function writes a TXPDO to the PDO memory range.
 \ingroup module_pdoucal
 */
 //------------------------------------------------------------------------------
-tOplkError pdoucal_setTxPdo(UINT channelId_p,
-                            UINT8* pPdo_p,
-                            WORD pdoSize_p)
+tOplkError pdoucal_setTxPdo(UINT8 channelId_p,
+                            void* pPdo_p,
+                            size_t pdoSize_p)
 {
     OPLK_ATOMIC_T    temp;
 
@@ -240,7 +241,8 @@ tOplkError pdoucal_setTxPdo(UINT channelId_p,
                         pPdoMem_l->txChannelInfo[channelId_p].writeBuf);
 
     // Invalidate data cache already done in pdoucal_getTxPdoAdrs()
-
+    OPLK_DCACHE_INVALIDATE(&pPdoMem_l->txChannelInfo[channelId_p],
+                           sizeof(tPdoBufferInfo));
     temp = pPdoMem_l->txChannelInfo[channelId_p].writeBuf;
     OPLK_ATOMIC_EXCHANGE(&pPdoMem_l->txChannelInfo[channelId_p].cleanBuf,
                          temp,
@@ -248,8 +250,8 @@ tOplkError pdoucal_setTxPdo(UINT channelId_p,
     pPdoMem_l->txChannelInfo[channelId_p].newData = 1;
 
     // Flush data cache for variables changed in this function
-    OPLK_DCACHE_FLUSH(&(pPdoMem_l->txChannelInfo[channelId_p].writeBuf), sizeof(OPLK_ATOMIC_T));
-    OPLK_DCACHE_FLUSH(&(pPdoMem_l->txChannelInfo[channelId_p].newData), sizeof(UINT8));
+    OPLK_DCACHE_FLUSH(&pPdoMem_l->txChannelInfo[channelId_p],
+                      sizeof(tPdoBufferInfo));
 
     DEBUG_LVL_PDO_TRACE("%s() chan:%d new wi:%d\n",
                         __func__,
@@ -274,9 +276,9 @@ The function reads an RXPDO from the PDO buffer.
 \ingroup module_pdoucal
 */
 //------------------------------------------------------------------------------
-tOplkError pdoucal_getRxPdo(UINT8** ppPdo_p,
-                            UINT channelId_p,
-                            WORD pdoSize_p)
+tOplkError pdoucal_getRxPdo(void** ppPdo_p,
+                            UINT8 channelId_p,
+                            size_t pdoSize_p)
 {
     OPLK_ATOMIC_T    readBuf;
 
@@ -286,7 +288,8 @@ tOplkError pdoucal_getRxPdo(UINT8** ppPdo_p,
     ASSERT(ppPdo_p != NULL);
 
     // Invalidate data cache for addressed txChannelInfo
-    OPLK_DCACHE_INVALIDATE(&(pPdoMem_l->rxChannelInfo[channelId_p]), sizeof(tPdoBufferInfo));
+    OPLK_DCACHE_INVALIDATE(&(pPdoMem_l->rxChannelInfo[channelId_p]),
+                           sizeof(tPdoBufferInfo));
 
     if (pPdoMem_l->rxChannelInfo[channelId_p].newData)
     {
@@ -297,12 +300,12 @@ tOplkError pdoucal_getRxPdo(UINT8** ppPdo_p,
         pPdoMem_l->rxChannelInfo[channelId_p].newData = 0;
 
         // Flush data cache for variables changed in this function
-        OPLK_DCACHE_FLUSH(&(pPdoMem_l->rxChannelInfo[channelId_p].readBuf), sizeof(OPLK_ATOMIC_T));
-        OPLK_DCACHE_FLUSH(&(pPdoMem_l->rxChannelInfo[channelId_p].newData), sizeof(UINT8));
+        OPLK_DCACHE_FLUSH(&(pPdoMem_l->rxChannelInfo[channelId_p]),
+                          sizeof(tPdoBufferInfo));
     }
 
-    readBuf = pPdoMem_l->rxChannelInfo[channelId_p].readBuf;
-    *ppPdo_p = pTripleBuf_l[readBuf] + pPdoMem_l->rxChannelInfo[channelId_p].channelOffset;
+    *ppPdo_p = (UINT8*)pTripleBuf_l[pPdoMem_l->rxChannelInfo[channelId_p].readBuf] +
+                pPdoMem_l->rxChannelInfo[channelId_p].channelOffset;
 
     OPLK_DCACHE_INVALIDATE(*ppPdo_p, pdoSize_p);
 

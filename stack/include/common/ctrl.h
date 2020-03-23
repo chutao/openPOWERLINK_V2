@@ -9,7 +9,7 @@ This file contains the definitions for the ctrl modules.
 *******************************************************************************/
 
 /*------------------------------------------------------------------------------
-Copyright (c) 2016, Bernecker+Rainer Industrie-Elektronik Ges.m.b.H. (B&R)
+Copyright (c) 2016, B&R Industrial Automation GmbH
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -111,9 +111,8 @@ between user and kernel stack.
 */
 typedef struct
 {
-    UINT8           aMacAddress[6];     ///< MAC address of the Ethernet interface
-    UINT            ethDevNumber;       ///< Device number of the Ethernet interface
-    char            szEthDevName[128];  ///< Device name of the Ethernet interface
+    UINT8           aMacAddress[6];     ///< MAC address of the network interface
+    char            aNetIfName[128];    ///< Device name of the network interface
 } tCtrlInitParam;
 
 //------------------------------------------------------------------------------

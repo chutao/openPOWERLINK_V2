@@ -11,7 +11,7 @@ This file contains the implementation of the WinPcap Ethernet driver.
 
 /*------------------------------------------------------------------------------
 Copyright (c) 2013, Kalycito Infotech Private Limited
-Copyright (c) 2016, Bernecker+Rainer Industrie-Elektronik Ges.m.b.H. (B&R)
+Copyright (c) 2017, B&R Industrial Automation GmbH
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -124,6 +124,7 @@ This function initializes the Ethernet driver.
 tOplkError edrv_init(const tEdrvInitParam* pEdrvInitParam_p)
 {
     char                errorMessage[PCAP_ERRBUF_SIZE];
+    char                aDevicePcapName[256];
     DWORD               threadId;
 
     // Check parameter validity
@@ -132,7 +133,7 @@ tOplkError edrv_init(const tEdrvInitParam* pEdrvInitParam_p)
     // clear instance structure
     OPLK_MEMSET(&edrvInstance_l, 0, sizeof(edrvInstance_l));
 
-    if (pEdrvInitParam_p->hwParam.pDevName == NULL)
+    if (pEdrvInitParam_p->pDevName == NULL)
         return kErrorEdrvInit;
 
     // save the init data
@@ -148,12 +149,15 @@ tOplkError edrv_init(const tEdrvInitParam* pEdrvInitParam_p)
         (edrvInstance_l.initParam.aMacAddr[4] == 0) &&
         (edrvInstance_l.initParam.aMacAddr[5] == 0))
     {   // read MAC address from controller
-        getMacAdrs(edrvInstance_l.initParam.hwParam.pDevName,
+        getMacAdrs(edrvInstance_l.initParam.pDevName,
                    edrvInstance_l.initParam.aMacAddr);
     }
 
+    // Add string specific for WinPCap
+    strcpy(aDevicePcapName, "\\Device\\NPF_");
+    strcat(aDevicePcapName, edrvInstance_l.initParam.pDevName);
     edrvInstance_l.pPcap = pcap_open_live(
-                        edrvInstance_l.initParam.hwParam.pDevName,
+                        aDevicePcapName,
                         65535,  // snaplen
                         1,      // promiscuous mode
                         1,      // milliseconds read timeout
@@ -301,7 +305,7 @@ tOplkError edrv_allocTxBuffer(tEdrvTxBuffer* pBuffer_p)
         return kErrorEdrvNoFreeBufEntry;
 
     // allocate buffer with malloc
-    pBuffer_p->pBuffer = (UINT8*)OPLK_MALLOC(pBuffer_p->maxBufferSize);
+    pBuffer_p->pBuffer = OPLK_MALLOC(pBuffer_p->maxBufferSize);
     if (pBuffer_p->pBuffer == NULL)
         return kErrorEdrvNoFreeBufEntry;
 
@@ -325,7 +329,7 @@ This function releases the Tx buffer.
 //------------------------------------------------------------------------------
 tOplkError edrv_freeTxBuffer(tEdrvTxBuffer* pBuffer_p)
 {
-    UINT8* pBuffer;
+    void*   pBuffer;
 
     // Check parameter validity
     ASSERT(pBuffer_p != NULL);
@@ -446,7 +450,7 @@ static void packetHandler(u_char* pParam_p,
     {   // filter out self generated traffic
         rxBuffer.bufferInFrame = kEdrvBufferLastInFrame;
         rxBuffer.rxFrameSize = pHeader_p->caplen;
-        rxBuffer.pBuffer = (UINT8*)pPktData_p;
+        rxBuffer.pBuffer = (void*)pPktData_p;
 
         pInstance->initParam.pfnRxHandler(&rxBuffer);
     }
@@ -484,32 +488,32 @@ static void packetHandler(u_char* pParam_p,
                 {
                     TRACE("%s: no matching TxB: DstMAC=%02X%02X%02X%02X%02X%02X\n",
                           __func__,
-                          (UINT)pPktData_p[0],
-                          (UINT)pPktData_p[1],
-                          (UINT)pPktData_p[2],
-                          (UINT)pPktData_p[3],
-                          (UINT)pPktData_p[4],
-                          (UINT)pPktData_p[5]);
+                          (UINT)((UINT8*)pPktData_p)[0],
+                          (UINT)((UINT8*)pPktData_p)[1],
+                          (UINT)((UINT8*)pPktData_p)[2],
+                          (UINT)((UINT8*)pPktData_p)[3],
+                          (UINT)((UINT8*)pPktData_p)[4],
+                          (UINT)((UINT8*)pPktData_p)[5]);
                     TRACE("   current TxB %p: DstMAC=%02X%02X%02X%02X%02X%02X\n",
                           (void*)pTxBuffer,
-                          (UINT)pTxBuffer->pBuffer[0],
-                          (UINT)pTxBuffer->pBuffer[1],
-                          (UINT)pTxBuffer->pBuffer[2],
-                          (UINT)pTxBuffer->pBuffer[3],
-                          (UINT)pTxBuffer->pBuffer[4],
-                          (UINT)pTxBuffer->pBuffer[5]);
+                          (UINT)((UINT8*)(pTxBuffer->pBuffer))[0],
+                          (UINT)((UINT8*)(pTxBuffer->pBuffer))[1],
+                          (UINT)((UINT8*)(pTxBuffer->pBuffer))[2],
+                          (UINT)((UINT8*)(pTxBuffer->pBuffer))[3],
+                          (UINT)((UINT8*)(pTxBuffer->pBuffer))[4],
+                          (UINT)((UINT8*)(pTxBuffer->pBuffer))[5]);
                 }
             }
         }
         else
         {
             TRACE("%s: no TxB: DstMAC=%02X%02X%02X%02X%02X%02X\n", __func__,
-                  pPktData_p[0],
-                  pPktData_p[1],
-                  pPktData_p[2],
-                  pPktData_p[3],
-                  pPktData_p[4],
-                  pPktData_p[5]);
+                  ((UINT8*)pPktData_p)[0],
+                  ((UINT8*)pPktData_p)[1],
+                  ((UINT8*)pPktData_p)[2],
+                  ((UINT8*)pPktData_p)[3],
+                  ((UINT8*)pPktData_p)[4],
+                  ((UINT8*)pPktData_p)[5]);
         }
     }
 }

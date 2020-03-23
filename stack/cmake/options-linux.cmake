@@ -2,9 +2,9 @@
 #
 # CMake options for openPOWERLINK stack on Linux
 #
-# Copyright (c) 2016, Bernecker+Rainer Industrie-Elektronik Ges.m.b.H. (B&R)
+# Copyright (c) 2016, B&R Industrial Automation GmbH
 # Copyright (c) 2016, Franz Profelt (franz.profelt@gmail.com)
-# Copyright (c) 2016, Kalycito Infotech Private Limited
+# Copyright (c) 2018, Kalycito Infotech Private Limited
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -49,8 +49,9 @@ OPTION (CFG_COMPILE_LIB_MN_SIM                  "Compile openPOWERLINK MN librar
 OPTION (CFG_COMPILE_LIB_CN                      "Compile openPOWERLINK CN library" ON)
 OPTION (CFG_COMPILE_LIB_CNAPP_USERINTF          "Compile openPOWERLINK CN application library for userspace" ON)
 OPTION (CFG_COMPILE_LIB_CNAPP_KERNELINTF        "Compile openPOWERLINK CN application library for kernel interface" ON)
+OPTION (CFG_COMPILE_LIB_CNAPP_ZYNQINTF          "Compile openPOWERLINK CN application library for zynq/FPGA interface" ON)
 OPTION (CFG_COMPILE_LIB_CNDRV_PCAP              "Compile openPOWERLINK CN driver library for linux userspace (pcap)" ON)
-OPTION (CFG_COMPILE_LIB_CN_SIM                  "Compile openPOWERLINK MN library with simulation interface" ON)
+OPTION (CFG_COMPILE_LIB_CN_SIM                  "Compile openPOWERLINK CN library with simulation interface" ON)
 
 ################################################################################
 # Options for shared libraries
@@ -60,6 +61,7 @@ OPTION (CFG_COMPILE_SHARED_LIBRARY              "Build openPOWERLINK library as 
 ################################################################################
 # Options for library features
 
+OPTION (CFG_USE_PCAP_EDRV                       "Compile openPOWERLINK library with pcap edrv" OFF)
 OPTION (CFG_INCLUDE_MN_REDUNDANCY               "Compile MN redundancy functions into MN libraries" OFF)
 CMAKE_DEPENDENT_OPTION (CFG_STORE_RESTORE       "Support storing of OD in non-volatile memory (file system)" ON
                                                 "CFG_COMPILE_LIB_CN OR CFG_COMPILE_LIB_CNAPP_USERINTF OR CFG_COMPILE_LIB_CNAPP_KERNELINTF" OFF)
@@ -103,6 +105,10 @@ ENDIF()
 
 IF(CFG_COMPILE_LIB_CNAPP_KERNELINTF)
     ADD_SUBDIRECTORY(proj/linux/liboplkcnapp-kernelintf)
+ENDIF()
+
+IF(CFG_COMPILE_LIB_CNAPP_ZYNQINTF)
+    ADD_SUBDIRECTORY(proj/linux/liboplkcnapp-kernelpcp)
 ENDIF()
 
 IF(CFG_COMPILE_LIB_CNDRV_PCAP)
